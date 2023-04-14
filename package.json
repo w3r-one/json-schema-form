@@ -40,5 +40,10 @@
 	},
 	"prettier": {
 		"useTabs": true
+	},
+	"release": {
+		"branches": [
+			"main"
+		]
 	}
 }
