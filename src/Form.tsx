@@ -56,7 +56,7 @@ export type ValueLeaf =
 	| boolean
 	| { [key: string]: ValueLeaf };
 
-export const Form = forwardRef(function Form<ResponseDataType = unknown>(
+const _Form = <ResponseDataType = unknown,>(
 	{
 		schema: schemaProps,
 		action: actionProps,
@@ -70,7 +70,7 @@ export const Form = forwardRef(function Form<ResponseDataType = unknown>(
 		fieldMapper,
 	}: FormProps<ResponseDataType>,
 	ref: ForwardedRef<HTMLFormElement>
-) {
+) => {
 	const schema = useMemo(() => compileSchema(schemaProps), [schemaProps]);
 	const name = schema.title;
 
@@ -150,7 +150,15 @@ export const Form = forwardRef(function Form<ResponseDataType = unknown>(
 			</FormContext.Provider>
 		</FieldMapperContext.Provider>
 	);
-});
+};
+
+export const Form = forwardRef(_Form);
+
+declare module "react" {
+	function forwardRef<T, P = {}>(
+		render: (props: P, ref: React.Ref<T>) => React.ReactElement | null
+	): (props: P & React.RefAttributes<T>) => React.ReactElement | null;
+}
 
 const SubmitButton = ({ status, children }: SubmitButtonProps) => {
 	return (

@@ -1,6 +1,6 @@
 {
 	"name": "@w3rone/json-schema-form",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"description": "Render forms based on JSON Schema definitions with React",
 	"main": "./lib/index.js",
 	"types": "./lib/index.d.ts",
