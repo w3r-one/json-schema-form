@@ -1,6 +1,6 @@
 {
 	"name": "@w3rone/json-schema-form",
-	"version": "0.0.3",
+	"version": "0.0.0-development",
 	"description": "Render forms based on JSON Schema definitions with React",
 	"main": "./lib/index.js",
 	"types": "./lib/index.d.ts",
@@ -9,10 +9,15 @@
 	],
 	"scripts": {
 		"build": "tsc",
-		"test": "echo \"Error: no test specified\" && exit 1"
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"semantic-release": "semantic-release"
 	},
 	"author": "Cyrille Perois <cyrille.perois@w3r.one>",
 	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/w3r-one/json-schema-form.git"
+	},
 	"peerDependencies": {
 		"react": "^18.2.0"
 	},
@@ -21,7 +26,8 @@
 		"@types/lodash.set": "^4.3.7",
 		"@types/react": "^18.0.35",
 		"prettier": "^2.8.7",
-		"typescript": "^5.0.4"
+		"typescript": "^5.0.4",
+		"semantic-release": "^21.0.1"
 	},
 	"dependencies": {
 		"@react-hook/async": "^3.1.1",
@@ -35,4 +41,5 @@
 	"prettier": {
 		"useTabs": true
 	}
+}
 }
