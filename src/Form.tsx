@@ -569,7 +569,14 @@ export const useFormRequest = <ResponseDataType = unknown,>({
 		const url = new URL(form.action);
 
 		if (form.method === "get") {
-			url.search = new URLSearchParams(formData as any).toString();
+			for (const [key, value] of formData.entries()) {
+				// We can't send files through GET method
+				if (value instanceof File) {
+					continue;
+				}
+
+				url.searchParams.append(key, value);
+			}
 		}
 
 		const headers = new Headers({
