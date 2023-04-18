@@ -155,3 +155,9 @@ type FormSchemaOptions = FieldOptions & {
 		method: "GET" | "POST" | "PUT" | "DELETE";
 	};
 };
+
+export const isFormSchema = (
+	schema: FormSchema | ObjectFieldSchema
+): schema is FormSchema => {
+	return typeof (schema as FormSchema).$id === "string";
+};
