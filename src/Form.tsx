@@ -89,8 +89,6 @@ const _Form = <ResponseDataType = unknown,>(
 			: model
 	);
 
-	onSuccess;
-
 	const [request, sendRequest] = useFormRequest<ResponseDataType>(
 		R.pickBy(
 			{
