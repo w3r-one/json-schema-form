@@ -217,7 +217,11 @@ const LinkedField = ({
 
 	const linkedField = useField(linkedFieldName);
 
-	if (linkedField.value && shouldShowField(dependency, linkedField.value)) {
+	const shouldShow =
+		!R.isNil(linkedField.value) &&
+		shouldShowField(dependency, linkedField.value);
+
+	if (shouldShow) {
 		return <Component {...field} required={required} />;
 	}
 
