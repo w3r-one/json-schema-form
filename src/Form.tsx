@@ -430,7 +430,7 @@ const valueReducer = (value: Value, action: Action) => {
 			return produce(value, (draftValue) => {
 				set(draftValue, action.payload.name, action.payload.value);
 
-				if (action.payload.linkedFields) {
+				if (shouldResetLinkedFields(action.payload)) {
 					for (const entry of action.payload.linkedFields) {
 						const [linkedFieldName] = entry;
 
@@ -442,6 +442,17 @@ const valueReducer = (value: Value, action: Action) => {
 		case "reset":
 			return {};
 	}
+};
+
+const shouldResetLinkedFields = (
+	payload: Change["payload"]
+): payload is {
+	[K in keyof Change["payload"]]: NonNullable<Change["payload"][K]>;
+} => {
+	return (
+		(!Array.isArray(payload.value) || payload.value.length === 0) &&
+		payload.linkedFields !== null
+	);
 };
 
 export class ServerError extends Error {
