@@ -26,8 +26,8 @@ export type FormProps<ResponseDataType = unknown> = {
 	submitLabel?: string;
 	model: Value;
 	children?: ReactNode;
-	onSuccess?: FormRequestOptions<ResponseDataType>["onSuccess"];
-	onError?: FormRequestOptions<ResponseDataType>["onError"];
+	onSuccess?: (data: ServerResponse<ResponseDataType>) => void;
+	onError?: (error: ServerError) => void;
 	onSubmit?: (e: FormEvent<HTMLFormElement>) => void;
 	components?: Partial<Components>;
 	fieldMapper: FieldMapper;
@@ -89,15 +89,10 @@ const _Form = <ResponseDataType = unknown,>(
 			: model
 	);
 
-	const [request, sendRequest] = useFormRequest<ResponseDataType>(
-		R.pickBy(
-			{
-				onSuccess,
-				onError,
-			},
-			R.isNot(R.isNil)
-		)
-	);
+	const [request, sendRequest] = useFormRequest<ResponseDataType>({
+		onSuccess,
+		onError,
+	});
 
 	const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
 		onSubmit ? onSubmit(e) : null;
@@ -567,15 +562,15 @@ const getLinkedFields = (schema: FormSchema, fieldName: string) => {
 	return linkedFields;
 };
 
-type FormRequestOptions<ResponseDataType = unknown> = {
-	onSuccess: ((data: ServerResponse<ResponseDataType>) => void) | undefined;
-	onError: ((error: ServerError) => void) | undefined;
+type FormRequestProps<ResponseDataType = unknown> = {
+	onSuccess?: FormProps<ResponseDataType>["onSuccess"];
+	onError: FormProps<ResponseDataType>["onError"];
 };
 
 export const useFormRequest = <ResponseDataType = unknown,>({
 	onSuccess,
 	onError,
-}: FormRequestOptions<ResponseDataType>) => {
+}: FormRequestProps<ResponseDataType>) => {
 	const formRequest = useAsync(async (form: HTMLFormElement) => {
 		const formData = new FormData(form);
 
