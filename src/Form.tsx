@@ -10,11 +10,11 @@ import {
 	useEffect,
 	useMemo,
 	useReducer,
+	useCallback,
 } from "react";
 import get from "lodash.get";
 import set from "lodash.set";
 import produce from "immer";
-import { type AsyncStatus, useAsync } from "@react-hook/async";
 import type { FieldDependency, FieldSchema, FormSchema } from "./types";
 import { ErrorBoundary } from "react-error-boundary";
 import { match, P } from "ts-pattern";
@@ -27,7 +27,7 @@ export type FormProps<ResponseDataType = unknown> = {
 	model: Value;
 	children?: ReactNode;
 	onSuccess?: (data: ServerResponse<ResponseDataType>) => void;
-	onError?: (error: ServerError) => void;
+	onError?: (error: unknown) => void;
 	onSubmit?: (e: FormEvent<HTMLFormElement>) => void;
 	components?: Partial<Components>;
 	fieldMapper: FieldMapper;
@@ -40,7 +40,7 @@ export type Components = {
 };
 
 type SubmitButtonProps = {
-	status: AsyncStatus;
+	status: FormRequestStatus;
 	children?: ReactNode;
 };
 
@@ -148,7 +148,7 @@ const _Form = <ResponseDataType = unknown,>(
 export const Form = forwardRef(_Form);
 
 declare module "react" {
-	function forwardRef<T, P = {}>(
+	function forwardRef<T, P = object>(
 		render: (props: P, ref: React.Ref<T>) => React.ReactElement | null
 	): (props: P & React.RefAttributes<T>) => React.ReactElement | null;
 }
@@ -564,55 +564,116 @@ const getLinkedFields = (schema: FormSchema, fieldName: string) => {
 
 type FormRequestProps<ResponseDataType = unknown> = {
 	onSuccess?: FormProps<ResponseDataType>["onSuccess"];
-	onError: FormProps<ResponseDataType>["onError"];
+	onError?: FormProps<ResponseDataType>["onError"];
 };
 
 export const useFormRequest = <ResponseDataType = unknown,>({
 	onSuccess,
 	onError,
 }: FormRequestProps<ResponseDataType>) => {
-	const formRequest = useAsync(async (form: HTMLFormElement) => {
-		const formData = new FormData(form);
-
-		const url = new URL(form.action);
-
-		if (form.method === "get") {
-			url.search = new URLSearchParams(formData as any).toString();
-		}
-
-		const headers = new Headers({
-			"X-Requested-With": "XMLHttpRequest",
-			Accept: "application/json",
-		});
-
-		const req = new Request(url.toString(), {
-			body: form.method === "post" ? formData : null,
-			method: form.method,
-			headers,
-		});
-
-		const response = await fetch(req);
-		const responseData: ServerResponse<ResponseDataType> =
-			await response.json();
-
-		if (response.ok) {
-			onSuccess?.(responseData);
-		} else {
-			const error = new ServerError(
-				responseData.message,
-				responseData.errors,
-				response.status
-			);
-
-			onError?.(error);
-
-			throw error;
-		}
-
-		return responseData;
+	const [request, dispatch] = useReducer(formRequestReducer<ResponseDataType>, {
+		status: "idle",
+		value: null,
+		error: null,
 	});
 
-	return formRequest;
+	const call = useCallback(async (form: HTMLFormElement) => {
+		dispatch({ type: "loading" });
+
+		try {
+			const response = await sendRequest<ResponseDataType>(form);
+			dispatch({ type: "success", payload: response });
+			onSuccess?.(response);
+		} catch (error) {
+			dispatch({ type: "error", payload: error });
+			onError?.(error);
+		}
+	}, []);
+
+	return [request, call] as const;
+};
+
+type FormRequest<ResponseDataType> = {
+	status: FormRequestStatus;
+	value: ServerResponse<ResponseDataType> | null;
+	error: unknown | null;
+};
+
+type FormRequestStatus = "idle" | "loading" | "success" | "error";
+
+type FormRequestAction<ResponseDataType> =
+	| {
+			type: "success";
+			payload: ServerResponse<ResponseDataType>;
+	  }
+	| { type: "error"; payload: unknown }
+	| { type: "loading" };
+
+const formRequestReducer = <ResponseDataType,>(
+	prevState: FormRequest<ResponseDataType>,
+	action: FormRequestAction<ResponseDataType>
+): FormRequest<ResponseDataType> => {
+	if (action.type === "success") {
+		return {
+			...prevState,
+			status: "success",
+			value: action.payload,
+			error: null,
+		};
+	}
+
+	if (action.type === "error") {
+		return {
+			...prevState,
+			status: "error",
+			error: action.payload,
+		};
+	}
+
+	if (action.type === "loading") {
+		return {
+			...prevState,
+			status: "loading",
+		};
+	}
+
+	return prevState;
+};
+
+const sendRequest = async <ResponseDataType,>(form: HTMLFormElement) => {
+	const formData = new FormData(form);
+
+	const url = new URL(form.action);
+
+	if (form.method === "get") {
+		url.search = new URLSearchParams(formData as any).toString();
+	}
+
+	const headers = new Headers({
+		"X-Requested-With": "XMLHttpRequest",
+		Accept: "application/json",
+	});
+
+	const req = new Request(url.toString(), {
+		body: form.method === "post" ? formData : null,
+		method: form.method,
+		headers,
+	});
+
+	const response = await fetch(req);
+	const responseData: ServerResponse<ResponseDataType> = await response.json();
+
+	if (response.ok) {
+		return responseData;
+	} else {
+		const error = new ServerError(
+			responseData.message,
+			responseData.errors,
+			response.status
+		);
+
+		throw error;
+	}
 };
 
 const FieldMapperContext = createContext<FieldMapper | undefined>(undefined);
