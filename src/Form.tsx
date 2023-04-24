@@ -29,6 +29,7 @@ export type FormProps<ResponseDataType = unknown> = {
 	onSuccess?: (data: ServerResponse<ResponseDataType>) => void;
 	onError?: (error: unknown) => void;
 	onSubmit?: (e: FormEvent<HTMLFormElement>) => void;
+	onValueChange?: (value: Value) => void;
 	components?: Partial<Components>;
 	fieldMapper: FieldMapper;
 };
@@ -66,6 +67,7 @@ const _Form = <ResponseDataType = unknown,>(
 		onSuccess,
 		onError,
 		onSubmit,
+		onValueChange,
 		components: componentsProps,
 		fieldMapper,
 	}: FormProps<ResponseDataType>,
@@ -88,6 +90,12 @@ const _Form = <ResponseDataType = unknown,>(
 			  )
 			: model
 	);
+
+	useEffect(() => {
+		if (onValueChange) {
+			onValueChange(value);
+		}
+	}, [value]);
 
 	const [request, sendRequest] = useFormRequest<ResponseDataType>({
 		onSuccess,
