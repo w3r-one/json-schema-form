@@ -14,11 +14,13 @@ import {
 } from "react";
 import get from "lodash.get";
 import set from "lodash.set";
-import produce from "immer";
+import produce, { setAutoFreeze } from "immer";
 import type { FieldDependency, FieldSchema, FormSchema } from "./types";
 import { ErrorBoundary } from "react-error-boundary";
 import { match, P } from "ts-pattern";
 import * as R from "remeda";
+
+setAutoFreeze(false);
 
 export type FormProps<ResponseDataType = unknown> = {
 	schema: FormSchema;
@@ -32,6 +34,7 @@ export type FormProps<ResponseDataType = unknown> = {
 	onValueChange?: (value: Value) => void;
 	components?: Partial<Components>;
 	fieldMapper: FieldMapper;
+	valueReducer?: (value: Value, action: Action) => Value;
 };
 
 export type Components = {
@@ -70,6 +73,7 @@ const _Form = <ResponseDataType = unknown,>(
 		onValueChange,
 		components: componentsProps,
 		fieldMapper,
+		valueReducer: valueReducerProps,
 	}: FormProps<ResponseDataType>,
 	ref: ForwardedRef<HTMLFormElement>
 ) => {
@@ -82,7 +86,7 @@ const _Form = <ResponseDataType = unknown,>(
 	const method = schema.options.form.method;
 
 	const [value, dispatch] = useReducer(
-		valueReducer,
+		valueReducerProps || valueReducer,
 		method === "GET"
 			? mergeModelWithSearchParams(
 					model,
@@ -427,7 +431,7 @@ type Change = {
 
 type Reset = { type: "reset" };
 
-const valueReducer = (value: Value, action: Action) => {
+export const valueReducer = (value: Value, action: Action) => {
 	switch (action.type) {
 		case "change":
 			return produce(value, (draftValue) => {
