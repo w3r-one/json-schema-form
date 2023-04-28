@@ -35,6 +35,7 @@ export type FormProps<ResponseDataType = unknown> = {
 	components?: Partial<Components>;
 	fieldMapper: FieldMapper;
 	valueReducer?: (value: Value, action: Action) => Value;
+	id?: string;
 };
 
 export type Components = {
@@ -74,6 +75,7 @@ const _Form = <ResponseDataType = unknown,>(
 		components: componentsProps,
 		fieldMapper,
 		valueReducer: valueReducerProps,
+		id,
 	}: FormProps<ResponseDataType>,
 	ref: ForwardedRef<HTMLFormElement>
 ) => {
@@ -142,6 +144,7 @@ const _Form = <ResponseDataType = unknown,>(
 					onSubmit={handleSubmit}
 					onReset={handleReset}
 					ref={ref}
+					id={id}
 				>
 					<components.RootInner>
 						{children ? children : <AutoField name={name} />}
