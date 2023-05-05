@@ -28,7 +28,7 @@ export type FormProps<ResponseDataType = unknown> = {
 	submitLabel?: string;
 	model: Value;
 	children?: ReactNode;
-	onSuccess?: (data: ServerResponse<ResponseDataType>) => void;
+	onSuccess?: (data: ResponseDataType) => void;
 	onError?: (error: unknown) => void;
 	onSubmit?: (e: FormEvent<HTMLFormElement>) => void;
 	onValueChange?: (value: Value) => void;
@@ -36,6 +36,7 @@ export type FormProps<ResponseDataType = unknown> = {
 	fieldMapper: FieldMapper;
 	valueReducer?: (value: Value, action: Action) => Value;
 	id?: string;
+	getErrorsFromResponse: (response: Response) => FormErrors;
 };
 
 export type Components = {
@@ -76,6 +77,7 @@ const _Form = <ResponseDataType = unknown,>(
 		fieldMapper,
 		valueReducer: valueReducerProps,
 		id,
+		getErrorsFromResponse,
 	}: FormProps<ResponseDataType>,
 	ref: ForwardedRef<HTMLFormElement>
 ) => {
@@ -126,10 +128,9 @@ const _Form = <ResponseDataType = unknown,>(
 	};
 
 	const errors =
-		(request.status === "error" &&
-			request.error instanceof ServerError &&
-			request.error.errors) ||
-		null;
+		request.status === "error" && request.error instanceof Response
+			? getErrorsFromResponse(request.error)
+			: null;
 
 	const context = { schema, value, dispatch, errors };
 
@@ -465,29 +466,6 @@ const shouldResetLinkedFields = (
 	);
 };
 
-export class ServerError extends Error {
-	errors: FormErrors | null;
-	status: number;
-
-	constructor(
-		message: string | null,
-		errors: FormErrors | null,
-		status: number
-	) {
-		super(message || "");
-
-		this.errors = errors;
-		this.status = status;
-	}
-}
-
-export type ServerResponse<DataType = unknown> = {
-	message: string | null;
-	redirect_url: string | null;
-	data: DataType;
-	errors: FormErrors | null;
-};
-
 export type FormErrors = Record<string, string[]>;
 
 const mergeModelWithSearchParams = (
@@ -610,7 +588,7 @@ export const useFormRequest = <ResponseDataType = unknown,>({
 
 type FormRequest<ResponseDataType> = {
 	status: FormRequestStatus;
-	value: ServerResponse<ResponseDataType> | null;
+	value: ResponseDataType | null;
 	error: unknown | null;
 };
 
@@ -619,7 +597,7 @@ type FormRequestStatus = "idle" | "loading" | "success" | "error";
 type FormRequestAction<ResponseDataType> =
 	| {
 			type: "success";
-			payload: ServerResponse<ResponseDataType>;
+			payload: ResponseDataType;
 	  }
 	| { type: "error"; payload: unknown }
 	| { type: "loading" };
@@ -676,18 +654,11 @@ const sendRequest = async <ResponseDataType,>(form: HTMLFormElement) => {
 	});
 
 	const response = await fetch(req);
-	const responseData: ServerResponse<ResponseDataType> = await response.json();
 
 	if (response.ok) {
-		return responseData;
+		return response.json() as ResponseDataType;
 	} else {
-		const error = new ServerError(
-			responseData.message,
-			responseData.errors,
-			response.status
-		);
-
-		throw error;
+		throw response;
 	}
 };
 
