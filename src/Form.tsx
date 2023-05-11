@@ -36,6 +36,7 @@ export type FormProps<ResponseDataType = unknown> = {
 	fieldMapper: FieldMapper;
 	valueReducer?: (value: Value, action: Action) => Value;
 	id?: string;
+	initialErrors?: FormErrors;
 };
 
 export type Components = {
@@ -76,6 +77,7 @@ const _Form = <ResponseDataType = unknown,>(
 		fieldMapper,
 		valueReducer: valueReducerProps,
 		id,
+		initialErrors,
 	}: FormProps<ResponseDataType>,
 	ref: ForwardedRef<HTMLFormElement>
 ) => {
@@ -106,6 +108,7 @@ const _Form = <ResponseDataType = unknown,>(
 	const [request, sendRequest] = useFormRequest<ResponseDataType>({
 		onSuccess,
 		onError,
+		initialErrors,
 	});
 
 	const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -580,16 +583,18 @@ const getLinkedFields = (schema: FormSchema, fieldName: string) => {
 type FormRequestProps<ResponseDataType = unknown> = {
 	onSuccess?: FormProps<ResponseDataType>["onSuccess"];
 	onError?: FormProps<ResponseDataType>["onError"];
+	initialErrors?: FormProps<ResponseDataType>["initialErrors"];
 };
 
 export const useFormRequest = <ResponseDataType = unknown,>({
 	onSuccess,
 	onError,
+	initialErrors,
 }: FormRequestProps<ResponseDataType>) => {
 	const [request, dispatch] = useReducer(formRequestReducer<ResponseDataType>, {
-		status: "idle",
+		status: initialErrors ? "error" : "idle",
 		value: null,
-		error: null,
+		error: initialErrors ? new ServerError(null, initialErrors, 400) : null,
 	});
 
 	const call = useCallback(async (form: HTMLFormElement) => {
