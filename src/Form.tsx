@@ -231,7 +231,7 @@ const LinkedField = ({
 	const linkedField = useField(linkedFieldName);
 
 	const shouldShow =
-		!R.isNil(linkedField.value) &&
+		linkedField.value !== undefined &&
 		shouldShowField(dependency, linkedField.value);
 
 	if (shouldShow) {
