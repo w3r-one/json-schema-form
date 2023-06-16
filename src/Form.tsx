@@ -445,9 +445,15 @@ export const valueReducer = (value: Value, action: Action) => {
 
 				if (shouldResetLinkedFields(action.payload)) {
 					for (const entry of action.payload.linkedFields) {
-						const [linkedFieldName] = entry;
+						const [linkedFieldName, linkedFieldSchema] = entry;
 
-						set(draftValue, linkedFieldName, "");
+						let newValue: string | boolean = "";
+
+						if (linkedFieldSchema.type === "boolean") {
+							newValue = false;
+						}
+
+						set(draftValue, linkedFieldName, newValue);
 					}
 				}
 			});
