@@ -71,14 +71,14 @@ const TextField = (props: FieldProps<StringFieldSchema>) => {
 
 const ObjectField = (props: FieldProps<ObjectFieldSchema>) => {
 	return (
-		<div>
-			<label htmlFor={props.id}>{props.label}</label>
-			<div>
+		<fieldset>
+			<legend id={props.id + "_label"}>{props.label}</legend>
+			<div aria-labelledby={props.id + "_label"}>
 				{Object.keys(props.schema.properties).map((fieldName) => {
 					return <AutoField key={fieldName} name={fieldName} />;
 				})}
 			</div>
-		</div>
+		</fieldset>
 	);
 };
 
