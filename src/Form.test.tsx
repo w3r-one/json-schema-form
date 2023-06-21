@@ -216,3 +216,18 @@ describe("components prop", () => {
 		expect(screen.getByTestId("SubmitButtonWrapper")).toBeInTheDocument();
 	});
 });
+
+test("submit button uses the given submitLabel", () => {
+	const submitLabel = "Plz submit me";
+
+	render(
+		<Form
+			schema={schema}
+			model={model}
+			fieldMapper={fieldMapper}
+			submitLabel={submitLabel}
+		/>
+	);
+
+	expect(screen.getByRole("button", { name: submitLabel })).toBeInTheDocument();
+});
