@@ -11,8 +11,8 @@
 		"build": "tsc",
 		"test": "jest",
 		"semantic-release": "semantic-release",
-		"storybook": "storybook dev -p 6006",
-		"build-storybook": "storybook build"
+		"storybook": "storybook dev -p 6006 --disable-telemetry",
+		"build-storybook": "storybook build --disable-telemetry"
 	},
 	"author": "Cyrille Perois <cyrille.perois@w3r.one>",
 	"license": "MIT",
