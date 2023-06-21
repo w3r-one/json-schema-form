@@ -64,6 +64,8 @@ const TextField = (props: FieldProps<StringFieldSchema>) => {
 				name={props.name}
 				id={props.id}
 				required={props.required}
+				value={props.value ? String(props.value) : ""}
+				onChange={(e) => props.onChange?.(e.currentTarget.value)}
 			/>
 		</div>
 	);
@@ -75,7 +77,9 @@ const ObjectField = (props: FieldProps<ObjectFieldSchema>) => {
 			<legend id={props.id + "_label"}>{props.label}</legend>
 			<div aria-labelledby={props.id + "_label"}>
 				{Object.keys(props.schema.properties).map((fieldName) => {
-					return <AutoField key={fieldName} name={fieldName} />;
+					return (
+						<AutoField key={fieldName} name={`${props.name}[${fieldName}]`} />
+					);
 				})}
 			</div>
 		</fieldset>
@@ -127,5 +131,25 @@ describe("when children is given", () => {
 				screen.queryByLabelText(fieldSchema.title)
 			).not.toBeInTheDocument();
 		}
+	});
+});
+
+test("fields are hydrated with values from model prop", () => {
+	const model = {
+		user: {
+			email: "john@doe.com",
+			password: "this is a super secret password, don't try this at home.",
+		},
+	};
+
+	render(<Form schema={schema} model={model} fieldMapper={fieldMapper} />);
+
+	const form = screen.getByRole<HTMLButtonElement>("button", {
+		name: "Submit",
+	}).form;
+
+	expect(form).toHaveFormValues({
+		"user[email]": model.user.email,
+		"user[password]": model.user.password,
 	});
 });
