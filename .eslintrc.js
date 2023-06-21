@@ -1,3 +1,5 @@
+/* eslint-env node */
+
 module.exports = {
 	env: {
 		browser: true,
@@ -17,5 +19,7 @@ module.exports = {
 		sourceType: "module",
 	},
 	plugins: ["react", "@typescript-eslint"],
-	rules: {},
+	rules: {
+		"react/prop-types": "off",
+	},
 };

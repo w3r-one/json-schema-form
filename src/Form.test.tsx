@@ -1,6 +1,12 @@
 import { test } from "@jest/globals";
 import { render, screen } from "@testing-library/react";
-import { Form, type FieldProps, AutoField, type FieldMapper } from "./Form";
+import {
+	Form,
+	type FieldProps,
+	AutoField,
+	type FieldMapper,
+	type Components,
+} from "./Form";
 import type { StringFieldSchema } from "./types";
 import type { FieldSchema } from "./types";
 import type { ObjectFieldSchema } from "./types";
@@ -151,5 +157,62 @@ test("fields are hydrated with values from model prop", () => {
 	expect(form).toHaveFormValues({
 		"user[email]": model.user.email,
 		"user[password]": model.user.password,
+	});
+});
+
+describe("components prop", () => {
+	test("components.RootInner is used when given", () => {
+		const RootInner: Components["RootInner"] = (props) => {
+			return <div data-testid={"RootInner"}>{props.children}</div>;
+		};
+
+		render(
+			<Form
+				schema={schema}
+				model={model}
+				fieldMapper={fieldMapper}
+				components={{ RootInner }}
+			/>
+		);
+
+		expect(screen.getByTestId("RootInner")).toBeInTheDocument();
+	});
+
+	test("components.SubmitButton is used when given", () => {
+		const SubmitButton: Components["SubmitButton"] = (props) => {
+			return (
+				<button type={"submit"} data-testid={"SubmitButton"}>
+					{props.children}
+				</button>
+			);
+		};
+
+		render(
+			<Form
+				schema={schema}
+				model={model}
+				fieldMapper={fieldMapper}
+				components={{ SubmitButton }}
+			/>
+		);
+
+		expect(screen.getByTestId("SubmitButton")).toBeInTheDocument();
+	});
+
+	test("components.SubmitButtonWrapper is used when given", () => {
+		const SubmitButtonWrapper: Components["SubmitButtonWrapper"] = (props) => {
+			return <div data-testid={"SubmitButtonWrapper"}>{props.children}</div>;
+		};
+
+		render(
+			<Form
+				schema={schema}
+				model={model}
+				fieldMapper={fieldMapper}
+				components={{ SubmitButtonWrapper }}
+			/>
+		);
+
+		expect(screen.getByTestId("SubmitButtonWrapper")).toBeInTheDocument();
 	});
 });
