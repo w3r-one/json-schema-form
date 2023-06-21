@@ -1,103 +1,15 @@
 import { test } from "@jest/globals";
 import { render, screen } from "@testing-library/react";
-import {
-	Form,
-	type FieldProps,
-	AutoField,
-	type FieldMapper,
-	type Components,
-} from "./Form";
-import type { StringFieldSchema } from "./types";
-import type { FieldSchema } from "./types";
-import type { ObjectFieldSchema } from "./types";
-import type { FormSchema } from "./types";
+import { type Components } from "./Form";
+import { composeStories } from "@storybook/react";
+import * as stories from "./Form.stories";
 
-const schema: FormSchema = {
-	$id: "",
-	$schema: "",
-	title: "user",
-	type: "object" as const,
-	properties: {
-		email: {
-			title: "Email",
-			type: "string",
-			options: {
-				layout: "default",
-				widget: "text",
-			},
-		},
-		password: {
-			title: "Password",
-			type: "string",
-			options: {
-				layout: "default",
-				widget: "password",
-			},
-		},
-	},
-	required: [],
-	options: {
-		layout: "default",
-		widget: "test",
-		form: {
-			action: "http://localhost/user/register",
-			method: "POST" as const,
-			async: true,
-		},
-	},
-};
-
-const model = {};
-
-const fieldMapper: FieldMapper = (fieldSchema: FieldSchema) => {
-	if (fieldSchema.type === "string") {
-		return TextField;
-	}
-
-	if (fieldSchema.type === "object") {
-		return ObjectField;
-	}
-
-	return null;
-};
-
-const TextField = (props: FieldProps<StringFieldSchema>) => {
-	return (
-		<div>
-			<label htmlFor={props.id}>{props.label}</label>
-			<input
-				type={props.schema.options.widget}
-				name={props.name}
-				id={props.id}
-				required={props.required}
-				value={props.value ? String(props.value) : ""}
-				onChange={(e) => props.onChange?.(e.currentTarget.value)}
-			/>
-		</div>
-	);
-};
-
-const ObjectField = (props: FieldProps<ObjectFieldSchema>) => {
-	return (
-		<fieldset>
-			<legend id={props.id + "_label"}>{props.label}</legend>
-			<div aria-labelledby={props.id + "_label"}>
-				{Object.keys(props.schema.properties).map((fieldName) => {
-					return (
-						<AutoField key={fieldName} name={`${props.name}[${fieldName}]`} />
-					);
-				})}
-			</div>
-		</fieldset>
-	);
-};
+const { Basic } = composeStories(stories);
 
 test("form element has the given id", () => {
 	const id = "form";
 
-	render(
-		<Form schema={schema} model={model} fieldMapper={fieldMapper} id={id} />
-	);
+	render(<Basic id={id} />);
 
 	const btn = screen.getByRole<HTMLButtonElement>("button", { name: "Submit" });
 
@@ -106,20 +18,22 @@ test("form element has the given id", () => {
 
 describe("when no children is given", () => {
 	test("all fields are automatically rendered", () => {
-		render(<Form schema={schema} model={model} fieldMapper={fieldMapper} />);
+		render(<Basic />);
 
-		for (const fieldSchema of Object.values(schema.properties)) {
+		const properties = Basic.args.schema?.properties || {};
+
+		Object.values(properties).forEach((fieldSchema) => {
 			expect(screen.getByLabelText(fieldSchema.title)).toBeInTheDocument();
-		}
+		});
 	});
 });
 
 describe("when children is given", () => {
 	test("children are rendered", () => {
 		render(
-			<Form schema={schema} model={model} fieldMapper={fieldMapper}>
+			<Basic>
 				<p>Children</p>
-			</Form>
+			</Basic>
 		);
 
 		expect(screen.getByText("Children")).toBeInTheDocument();
@@ -127,16 +41,18 @@ describe("when children is given", () => {
 
 	test("no field is automatically rendered", () => {
 		render(
-			<Form schema={schema} model={model} fieldMapper={fieldMapper}>
+			<Basic>
 				<p>Children</p>
-			</Form>
+			</Basic>
 		);
 
-		for (const fieldSchema of Object.values(schema.properties)) {
+		const properties = Basic.args.schema?.properties || {};
+
+		Object.values(properties).forEach((fieldSchema) => {
 			expect(
 				screen.queryByLabelText(fieldSchema.title)
 			).not.toBeInTheDocument();
-		}
+		});
 	});
 });
 
@@ -148,7 +64,7 @@ test("fields are hydrated with values from model prop", () => {
 		},
 	};
 
-	render(<Form schema={schema} model={model} fieldMapper={fieldMapper} />);
+	render(<Basic model={model} />);
 
 	const form = screen.getByRole<HTMLButtonElement>("button", {
 		name: "Submit",
@@ -166,14 +82,7 @@ describe("components prop", () => {
 			return <div data-testid={"RootInner"}>{props.children}</div>;
 		};
 
-		render(
-			<Form
-				schema={schema}
-				model={model}
-				fieldMapper={fieldMapper}
-				components={{ RootInner }}
-			/>
-		);
+		render(<Basic components={{ RootInner }} />);
 
 		expect(screen.getByTestId("RootInner")).toBeInTheDocument();
 	});
@@ -187,14 +96,7 @@ describe("components prop", () => {
 			);
 		};
 
-		render(
-			<Form
-				schema={schema}
-				model={model}
-				fieldMapper={fieldMapper}
-				components={{ SubmitButton }}
-			/>
-		);
+		render(<Basic components={{ SubmitButton }} />);
 
 		expect(screen.getByTestId("SubmitButton")).toBeInTheDocument();
 	});
@@ -204,14 +106,7 @@ describe("components prop", () => {
 			return <div data-testid={"SubmitButtonWrapper"}>{props.children}</div>;
 		};
 
-		render(
-			<Form
-				schema={schema}
-				model={model}
-				fieldMapper={fieldMapper}
-				components={{ SubmitButtonWrapper }}
-			/>
-		);
+		render(<Basic components={{ SubmitButtonWrapper }} />);
 
 		expect(screen.getByTestId("SubmitButtonWrapper")).toBeInTheDocument();
 	});
@@ -220,14 +115,7 @@ describe("components prop", () => {
 test("submit button uses the given submitLabel", () => {
 	const submitLabel = "Plz submit me";
 
-	render(
-		<Form
-			schema={schema}
-			model={model}
-			fieldMapper={fieldMapper}
-			submitLabel={submitLabel}
-		/>
-	);
+	render(<Basic submitLabel={submitLabel} />);
 
 	expect(screen.getByRole("button", { name: submitLabel })).toBeInTheDocument();
 });
