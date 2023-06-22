@@ -672,7 +672,11 @@ const sendRequest = async <ResponseDataType,>(form: HTMLFormElement) => {
 	const url = new URL(form.action);
 
 	if (form.method === "get") {
-		url.search = new URLSearchParams(formData as any).toString();
+		// TODO add test
+		url.search = new URLSearchParams([
+			...[...formData.entries()].map(([key, value]) => [key, value.toString()]),
+			...url.searchParams.entries(),
+		]).toString();
 	}
 
 	const headers = new Headers({
