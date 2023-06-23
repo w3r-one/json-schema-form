@@ -14,7 +14,7 @@ import {
 } from "react";
 import get from "lodash.get";
 import set from "lodash.set";
-import produce, { setAutoFreeze } from "immer";
+import { setAutoFreeze, produce } from "immer";
 import type { FieldDependency, FieldSchema, FormSchema } from "./types";
 import { ErrorBoundary } from "react-error-boundary";
 import { match, P } from "ts-pattern";
