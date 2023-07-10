@@ -8,7 +8,7 @@ it can also be used without it.
 ## Install
 
 ```console
-npm install --save-dev @w3rone/json-schema-form
+npm install --save @w3rone/json-schema-form
 ```
 
 ## Examples
