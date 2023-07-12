@@ -23,6 +23,15 @@ const schema: FormSchema = {
 	title: "user",
 	type: "object" as const,
 	properties: {
+		_token: {
+			title: "",
+			type: "string",
+			default: "csrf-token",
+			options: {
+				layout: "defaullt",
+				widget: "hidden",
+			},
+		},
 		email: {
 			title: "Email",
 			type: "string",

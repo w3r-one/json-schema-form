@@ -18,13 +18,24 @@ test("form element has the given id", () => {
 
 describe("when no children is given", () => {
 	test("all fields are automatically rendered", () => {
-		render(<Basic />);
+		const { container } = render(<Basic />);
 
-		const properties = Basic.args.schema?.properties || {};
-
-		Object.values(properties).forEach((fieldSchema) => {
-			expect(screen.getByLabelText(fieldSchema.title)).toBeInTheDocument();
+		const btn = screen.getByRole<HTMLButtonElement>("button", {
+			name: "Submit",
 		});
+
+		if (!btn.form) {
+			throw new Error("No form found");
+		}
+
+		const data = new FormData(btn.form);
+		const names = Array.from(data.keys());
+
+		names.forEach((name) => {
+			expect(container.querySelector(`[name='${name}']`)).toBeInTheDocument();
+		});
+
+		expect(btn.form).toHaveFormValues({});
 	});
 });
 
@@ -118,4 +129,20 @@ test("submit button uses the given submitLabel", () => {
 	render(<Basic submitLabel={submitLabel} />);
 
 	expect(screen.getByRole("button", { name: submitLabel })).toBeInTheDocument();
+});
+
+test("default value", () => {
+	render(<Basic />);
+
+	const btn = screen.getByRole<HTMLButtonElement>("button", {
+		name: "Submit",
+	});
+
+	if (!btn.form) {
+		throw new Error("No form found");
+	}
+
+	expect(btn.form).toHaveFormValues({
+		"user[_token]": "csrf-token",
+	});
 });
