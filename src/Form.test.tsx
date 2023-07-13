@@ -40,6 +40,16 @@ describe("when no children is given", () => {
 });
 
 describe("when children is given", () => {
+	test("submit button is not rendered", () => {
+		render(
+			<Basic>
+				<p>Children</p>
+			</Basic>
+		);
+
+		expect(screen.queryByRole("button")).not.toBeInTheDocument();
+	});
+
 	test("children are rendered", () => {
 		render(
 			<Basic>

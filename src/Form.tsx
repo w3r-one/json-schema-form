@@ -40,15 +40,14 @@ export type FormProps<ResponseDataType = unknown> = {
 };
 
 export type Components = {
-	RootInner: ElementType<{ children?: ReactNode }>;
+	RootInner: ElementType<RootInnerProps>;
 	SubmitButton: ElementType<SubmitButtonProps>;
-	SubmitButtonWrapper: ElementType<{ children?: ReactNode }>;
+	SubmitButtonWrapper: ElementType<SubmitButtonWrapperProps>;
 };
 
-type SubmitButtonProps = {
-	status: FormRequestStatus;
-	children?: ReactNode;
-};
+type RootInnerProps = { children?: ReactNode };
+type SubmitButtonProps = { children?: ReactNode };
+type SubmitButtonWrapperProps = { children?: ReactNode };
 
 export type CompiledFormSchema = FormSchema & {
 	root: true;
@@ -140,25 +139,31 @@ const _Form = <ResponseDataType = unknown,>(
 
 	return (
 		<FieldMapperContext.Provider value={fieldMapper}>
-			<FormContext.Provider value={context}>
-				<form
-					action={action}
-					method={method}
-					onSubmit={handleSubmit}
-					onReset={handleReset}
-					ref={ref}
-					id={id}
-				>
-					<components.RootInner>
-						{children ? children : <AutoField name={name} />}
-						<components.SubmitButtonWrapper>
-							<components.SubmitButton status={request.status}>
-								{submitLabel}
-							</components.SubmitButton>
-						</components.SubmitButtonWrapper>
-					</components.RootInner>
-				</form>
-			</FormContext.Provider>
+			<FormRequestContext.Provider value={request}>
+				<FormContext.Provider value={context}>
+					<form
+						action={action}
+						method={method}
+						onSubmit={handleSubmit}
+						onReset={handleReset}
+						ref={ref}
+						id={id}
+					>
+						{children ? (
+							children
+						) : (
+							<components.RootInner>
+								<AutoField name={name} />
+								<components.SubmitButtonWrapper>
+									<components.SubmitButton>
+										{submitLabel}
+									</components.SubmitButton>
+								</components.SubmitButtonWrapper>
+							</components.RootInner>
+						)}
+					</form>
+				</FormContext.Provider>
+			</FormRequestContext.Provider>
 		</FieldMapperContext.Provider>
 	);
 };
@@ -171,10 +176,12 @@ declare module "react" {
 	): (props: P & React.RefAttributes<T>) => React.ReactElement | null;
 }
 
-const SubmitButton = ({ status, children }: SubmitButtonProps) => {
+const SubmitButton = (props: SubmitButtonProps) => {
+	const request = useFormRequestContext();
+
 	return (
-		<button type="submit" disabled={status === "loading"}>
-			{children}
+		<button type="submit" disabled={request.status === "loading"}>
+			{props.children}
 		</button>
 	);
 };
@@ -747,4 +754,20 @@ export const AutoField = ({ name, required = false }: AutoFieldProps) => {
 	}
 
 	return <FieldComponent {...field} required={required} />;
+};
+
+const FormRequestContext = createContext<FormRequest<unknown> | undefined>(
+	undefined
+);
+
+export const useFormRequestContext = () => {
+	const context = useContext(FormRequestContext);
+
+	if (context === undefined) {
+		throw new Error(
+			"`useFormRequest` must be used in a component wrapper in a `FormRequestContext.Provider`"
+		);
+	}
+
+	return context;
 };
