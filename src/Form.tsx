@@ -321,7 +321,7 @@ export const useField = (fieldName: string): FieldProps => {
 	const fieldErrors = errors?.[fieldName] || [];
 
 	return {
-		value: fieldValue || fieldSchema.default,
+		value: fieldValue ?? fieldSchema.default,
 		onChange,
 		name: fieldName,
 		id: fieldNameToId(fieldName),
