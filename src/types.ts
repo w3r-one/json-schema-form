@@ -78,17 +78,17 @@ export type BooleanFieldSchema = CommonFieldSchema & {
 	default?: boolean;
 };
 
-type NumberFieldSchema = CommonFieldSchema & {
+export type NumberFieldSchema = CommonFieldSchema & {
 	type: "number";
 	default?: number;
 };
 
-type IntegerFieldSchema = CommonFieldSchema & {
+export type IntegerFieldSchema = CommonFieldSchema & {
 	type: "integer";
 	default?: number;
 };
 
-type ArrayFieldSchema = CommonFieldSchema & {
+export type ArrayFieldSchema = CommonFieldSchema & {
 	type: "array";
 };
 
