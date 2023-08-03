@@ -90,6 +90,7 @@ export type IntegerFieldSchema = CommonFieldSchema & {
 
 export type ArrayFieldSchema = CommonFieldSchema & {
 	type: "array";
+	default?: Array<string>
 };
 
 export type CollectionFieldSchema = ArrayFieldSchema & {
