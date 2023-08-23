@@ -10,12 +10,8 @@ type FieldOptions = {
 	widget: string;
 	highlighted?: boolean;
 	dependencies?: [FieldDependency, ...Array<FieldDependency>];
-	attr?: FieldAttr;
+	attr?: Record<string, string>;
 	filterable?: boolean;
-};
-
-type FieldAttr = {
-	icon?: string;
 };
 
 export type FieldDependency = {
