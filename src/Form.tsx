@@ -28,9 +28,9 @@ export type FormProps<ResponseDataType = unknown> = {
 	submitLabel?: string;
 	model: Value;
 	children?: ReactNode;
-	onSuccess?: (data: ServerResponse<ResponseDataType>) => void;
-	onError?: (error: unknown) => void;
-	onSubmit?: (e: FormEvent<HTMLFormElement>) => void;
+	onSuccess?: ((data: ServerResponse<ResponseDataType>) => void) | undefined;
+	onError?: ((error: unknown) => void) | undefined;
+	onSubmit?: ((e: FormEvent<HTMLFormElement>) => void) | undefined;
 	onValueChange?: (value: Value) => void;
 	components?: Partial<Components>;
 	fieldMapper: FieldMapper;
