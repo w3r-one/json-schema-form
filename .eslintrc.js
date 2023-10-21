@@ -10,6 +10,7 @@ module.exports = {
 		"plugin:react/recommended",
 		"plugin:react/jsx-runtime",
 		"plugin:@typescript-eslint/recommended",
+		"plugin:@typescript-eslint/stylistic",
 		"prettier",
 		"plugin:storybook/recommended",
 	],
@@ -20,7 +21,14 @@ module.exports = {
 		sourceType: "module",
 	},
 	plugins: ["react", "@typescript-eslint"],
+	settings: {
+		react: {
+			version: "detect",
+		},
+	},
 	rules: {
 		"react/prop-types": "off",
+		"@typescript-eslint/array-type": ["error", { default: "generic" }],
+		"@typescript-eslint/consistent-type-definitions": ["error", "type"],
 	},
 };
