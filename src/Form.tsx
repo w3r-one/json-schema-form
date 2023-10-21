@@ -56,8 +56,8 @@ export type CompiledFormSchema = FormSchema & {
 export type Value = Record<string, ValueLeaf>;
 export type ValueLeaf =
 	| string
-	| string[]
-	| any[]
+	| Array<string>
+	| Array<any>
 	| boolean
 	| { [key: string]: ValueLeaf };
 
@@ -297,7 +297,7 @@ export const getParentName = (name: string) => {
 	return partsToName(parts.slice(0, -1));
 };
 
-const partsToName = (parts: string[]) => {
+const partsToName = (parts: Array<string>) => {
 	return parts.reduce((previousValue, currentValue, currentIndex) => {
 		if (currentIndex === 0) {
 			return currentValue;
@@ -348,7 +348,7 @@ export type FieldProps<SchemaType = FieldSchema> = {
 	label: string;
 	description?: string;
 	schema: SchemaType;
-	errors: string[];
+	errors: Array<string>;
 	placeholder?: string;
 	required?: boolean;
 };
@@ -504,7 +504,7 @@ export type ServerResponse<DataType = unknown> = {
 	errors: FormErrors | null;
 };
 
-export type FormErrors = Record<string, string[]>;
+export type FormErrors = Record<string, Array<string>>;
 
 const mergeModelWithSearchParams = (
 	model: Value,
