@@ -57,6 +57,7 @@ export type Value = Record<string, ValueLeaf>;
 export type ValueLeaf =
 	| string
 	| Array<string>
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	| Array<any>
 	| boolean
 	| { [key: string]: ValueLeaf };
@@ -369,6 +370,7 @@ export const getFieldSchema = (schema: FormSchema, fieldName: string) => {
 	}
 
 	const fieldSchema = significantFieldNameParts.reduce(
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		(prevSchema: any, fieldNamePart) => {
 			if (Number.isNaN(Number(fieldNamePart))) {
 				return prevSchema.properties[fieldNamePart];
@@ -679,6 +681,7 @@ const sendRequest = async <ResponseDataType,>(form: HTMLFormElement) => {
 	const url = new URL(form.action);
 
 	if (form.method === "get") {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		url.search = new URLSearchParams(formData as any).toString();
 	}
 
