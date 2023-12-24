@@ -44,7 +44,7 @@ describe("when children is given", () => {
 		render(
 			<Basic>
 				<p>Children</p>
-			</Basic>
+			</Basic>,
 		);
 
 		expect(screen.queryByRole("button")).not.toBeInTheDocument();
@@ -54,7 +54,7 @@ describe("when children is given", () => {
 		render(
 			<Basic>
 				<p>Children</p>
-			</Basic>
+			</Basic>,
 		);
 
 		expect(screen.getByText("Children")).toBeInTheDocument();
@@ -64,36 +64,36 @@ describe("when children is given", () => {
 		render(
 			<Basic>
 				<p>Children</p>
-			</Basic>
+			</Basic>,
 		);
 
 		const properties = Basic.args.schema?.properties || {};
 
 		Object.values(properties).forEach((fieldSchema) => {
 			expect(
-				screen.queryByLabelText(fieldSchema.title)
+				screen.queryByLabelText(fieldSchema.title),
 			).not.toBeInTheDocument();
 		});
 	});
 });
 
-test("fields are hydrated with values from model prop", () => {
-	const model = {
+test("fields are hydrated with values from initialValue prop", () => {
+	const initialValue = {
 		user: {
 			email: "john@doe.com",
 			password: "this is a super secret password, don't try this at home.",
 		},
 	};
 
-	render(<Basic model={model} />);
+	render(<Basic initialValue={initialValue} />);
 
 	const form = screen.getByRole<HTMLButtonElement>("button", {
 		name: "Submit",
 	}).form;
 
 	expect(form).toHaveFormValues({
-		"user[email]": model.user.email,
-		"user[password]": model.user.password,
+		"user[email]": initialValue.user.email,
+		"user[password]": initialValue.user.password,
 	});
 });
 

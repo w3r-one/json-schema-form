@@ -26,7 +26,7 @@ export type FormProps<ResponseDataType = unknown> = {
 	schema: FormSchema;
 	action?: string;
 	submitLabel?: string;
-	model: Value;
+	initialValue?: Value;
 	children?: ReactNode;
 	onSuccess?: ((data: ServerResponse<ResponseDataType>) => void) | undefined;
 	onError?: ((error: unknown) => void) | undefined;
@@ -67,7 +67,7 @@ const _Form = <ResponseDataType = unknown,>(
 		schema: schemaProps,
 		action: actionProps,
 		submitLabel = "Submit",
-		model = {},
+		initialValue = {},
 		children,
 		onSuccess,
 		onError,
@@ -79,7 +79,7 @@ const _Form = <ResponseDataType = unknown,>(
 		id,
 		initialErrors,
 	}: FormProps<ResponseDataType>,
-	ref: ForwardedRef<HTMLFormElement>
+	ref: ForwardedRef<HTMLFormElement>,
 ) => {
 	const schema = useMemo(() => compileSchema(schemaProps), [schemaProps]);
 	const name = schema.title;
@@ -91,12 +91,7 @@ const _Form = <ResponseDataType = unknown,>(
 
 	const [value, dispatch] = useReducer(
 		valueReducerProps || valueReducer,
-		method === "GET"
-			? mergeModelWithSearchParams(
-					model,
-					new URLSearchParams(window.location.search)
-			  )
-			: model
+		initialValue,
 	);
 
 	useEffect(() => {
@@ -173,7 +168,7 @@ export const Form = forwardRef(_Form);
 
 declare module "react" {
 	function forwardRef<T, P = object>(
-		render: (props: P, ref: React.Ref<T>) => React.ReactElement | null
+		render: (props: P, ref: React.Ref<T>) => React.ReactElement | null,
 	): (props: P & React.RefAttributes<T>) => React.ReactElement | null;
 }
 
@@ -251,7 +246,7 @@ const LinkedField = ({
 
 const shouldShowField = (
 	dependency: FieldDependency,
-	dependencyValue: ValueLeaf
+	dependencyValue: ValueLeaf,
 ) => {
 	switch (dependency.mode) {
 		case "equal":
@@ -382,7 +377,7 @@ export const getFieldSchema = (schema: FormSchema, fieldName: string) => {
 				}
 			}
 		},
-		schema
+		schema,
 	);
 
 	if (!fieldSchema) {
@@ -473,7 +468,7 @@ export const valueReducer = (value: Value, action: Action) => {
 };
 
 const shouldResetLinkedFields = (
-	payload: Change["payload"]
+	payload: Change["payload"],
 ): payload is {
 	[K in keyof Change["payload"]]: NonNullable<Change["payload"][K]>;
 } => {
@@ -490,7 +485,7 @@ export class ServerError extends Error {
 	constructor(
 		message: string | null,
 		errors: FormErrors | null,
-		status: number
+		status: number,
 	) {
 		super(message || "");
 
@@ -507,25 +502,6 @@ export type ServerResponse<DataType = unknown> = {
 };
 
 export type FormErrors = Record<string, Array<string>>;
-
-const mergeModelWithSearchParams = (
-	model: Value,
-	searchParams: URLSearchParams
-): Value => {
-	const uniqueKeys = [...new Set(searchParams.keys())];
-
-	return uniqueKeys.reduce((acc, key) => {
-		const value = key.endsWith("[]")
-			? searchParams.getAll(key)
-			: searchParams.get(key) || "";
-
-		const sanitizedKey = key.endsWith("[]") ? key.slice(0, -2) : key;
-
-		set(acc, sanitizedKey, value);
-
-		return acc;
-	}, model);
-};
 
 const compileSchema = (rawSchema: FormSchema): CompiledFormSchema => {
 	const compiledSchema = {
@@ -544,7 +520,7 @@ const compileFieldSchema = (fieldSchema: FieldSchema): FieldSchema => {
 			(schema): FieldSchema => ({
 				...schema,
 				properties: R.mapValues(schema.properties, compileFieldSchema),
-			})
+			}),
 		)
 		.with(
 			{ type: "array", items: P.not(undefined) },
@@ -555,7 +531,7 @@ const compileFieldSchema = (fieldSchema: FieldSchema): FieldSchema => {
 					? schema.items.map(compileFieldSchema)
 					: /* @ts-expect-error ... */
 					  compileFieldSchema(schema.items),
-			})
+			}),
 		)
 		.otherwise((schema) => schema);
 
@@ -587,9 +563,9 @@ const getLinkedFields = (schema: FormSchema, fieldName: string) => {
 			.filter(
 				(entry) =>
 					(entry[1] as FieldSchema).options?.dependencies?.[0]?.property ===
-					fieldNameParts[fieldNameParts.length - 1]
+					fieldNameParts[fieldNameParts.length - 1],
 			)
-			.map((entry) => [`${parentFieldName}[${entry[0]}]`, entry[1]])
+			.map((entry) => [`${parentFieldName}[${entry[0]}]`, entry[1]]),
 	);
 
 	return linkedFields;
@@ -646,7 +622,7 @@ type FormRequestAction<ResponseDataType> =
 
 const formRequestReducer = <ResponseDataType,>(
 	prevState: FormRequest<ResponseDataType>,
-	action: FormRequestAction<ResponseDataType>
+	action: FormRequestAction<ResponseDataType>,
 ): FormRequest<ResponseDataType> => {
 	if (action.type === "success") {
 		return {
@@ -705,7 +681,7 @@ const sendRequest = async <ResponseDataType,>(form: HTMLFormElement) => {
 		const error = new ServerError(
 			responseData.message,
 			responseData.errors,
-			response.status
+			response.status,
 		);
 
 		throw error;
@@ -719,7 +695,7 @@ export const useFieldMapper = () => {
 
 	if (ctx === undefined) {
 		throw new Error(
-			"`useFieldMapper` must be used in a component wrapped in a `FieldMapperContext.Provider`"
+			"`useFieldMapper` must be used in a component wrapped in a `FieldMapperContext.Provider`",
 		);
 	}
 
@@ -735,7 +711,7 @@ export const AutoField = ({ name, required = false }: AutoFieldProps) => {
 		if (!FieldComponent) {
 			console.warn(
 				"No field component returned by field mapper for the following field schema:",
-				field.schema
+				field.schema,
 			);
 		}
 	}, [FieldComponent]);
@@ -760,7 +736,7 @@ export const AutoField = ({ name, required = false }: AutoFieldProps) => {
 };
 
 const FormRequestContext = createContext<FormRequest<unknown> | undefined>(
-	undefined
+	undefined,
 );
 
 export const useFormRequestContext = () => {
@@ -768,7 +744,7 @@ export const useFormRequestContext = () => {
 
 	if (context === undefined) {
 		throw new Error(
-			"`useFormRequest` must be used in a component wrapper in a `FormRequestContext.Provider`"
+			"`useFormRequest` must be used in a component wrapper in a `FormRequestContext.Provider`",
 		);
 	}
 
