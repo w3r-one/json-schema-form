@@ -1,6 +1,5 @@
 import {
 	createContext,
-	type Dispatch,
 	type ElementType,
 	type FormEvent,
 	type ForwardedRef,
@@ -26,7 +25,9 @@ export type FormProps<ResponseDataType = unknown> = {
 	schema: FormSchema;
 	action?: string;
 	submitLabel?: string;
+	// TODO Make it impossible to pass both `initialValue` and `value`
 	initialValue?: Value;
+	value?: Value;
 	children?: ReactNode;
 	onSuccess?: ((data: ServerResponse<ResponseDataType>) => void) | undefined;
 	onError?: ((error: unknown) => void) | undefined;
@@ -69,7 +70,8 @@ const _Form = <ResponseDataType = unknown,>(
 		schema: schemaProps,
 		action: actionProps,
 		submitLabel = "Submit",
-		initialValue = {},
+		initialValue,
+		value: valueProps,
 		children,
 		onSuccess,
 		onError,
@@ -91,16 +93,20 @@ const _Form = <ResponseDataType = unknown,>(
 
 	const method = schema.options.form.method;
 
-	const [value, dispatch] = useReducer(
+	const [internalValue, dispatch] = useReducer(
 		valueReducerProps || valueReducer,
-		initialValue,
+		initialValue ?? {},
 	);
 
+	const value = valueProps ?? internalValue;
+
+	const isControlled = valueProps !== undefined && onValueChange !== undefined;
+
 	useEffect(() => {
-		if (onValueChange) {
-			onValueChange(value);
+		if (onValueChange && !isControlled) {
+			onValueChange(internalValue);
 		}
-	}, [value]);
+	}, [internalValue, isControlled]);
 
 	const [request, sendRequest] = useFormRequest<ResponseDataType>({
 		onSuccess,
@@ -121,17 +127,33 @@ const _Form = <ResponseDataType = unknown,>(
 		}
 	};
 
-	const handleReset = () => {
-		dispatch({ type: "reset" });
-	};
-
 	const errors =
 		(request.status === "error" &&
 			request.error instanceof ServerError &&
 			request.error.errors) ||
 		null;
 
-	const context = { schema, value, dispatch, errors };
+	const handleReset = () => {
+		dispatch({ type: "reset" });
+	};
+
+	const handleFieldChange = (name: string, fieldValue: ValueLeaf) => {
+		const linkedFields = getLinkedFields(schema, name) as Map<
+			string,
+			FieldSchema
+		> | null;
+
+		if (isControlled) {
+			onValueChange(getNextValue(value, name, fieldValue, linkedFields));
+		} else {
+			dispatch({
+				type: "change",
+				payload: { name, value: fieldValue, linkedFields },
+			});
+		}
+	};
+
+	const context = { schema, value, handleFieldChange, errors };
 
 	const components = { ...DEFAULT_COMPONENTS, ...componentsProps };
 
@@ -193,7 +215,7 @@ const FormContext = createContext<FormContextValue | null>(null);
 type FormContextValue = {
 	schema: FormSchema;
 	value: Value;
-	dispatch: Dispatch<Action>;
+	handleFieldChange: (name: string, value: ValueLeaf) => void;
 	errors: FormErrors | null;
 };
 
@@ -300,21 +322,13 @@ const partsToName = (parts: Array<string>) => {
 };
 
 export const useField = (fieldName: string): FieldProps => {
-	const { schema, value, dispatch, errors } = useForm();
+	const { schema, value, handleFieldChange, errors } = useForm();
 
 	const fieldSchema = getFieldSchema(schema, fieldName);
 	const fieldValue = getFieldValue(value, fieldName);
 
 	const onChange = (value: ValueLeaf) => {
-		const linkedFields = getLinkedFields(schema, fieldName) as Map<
-			string,
-			FieldSchema
-		> | null;
-
-		dispatch({
-			type: "change",
-			payload: { name: fieldName, value, linkedFields },
-		});
+		handleFieldChange(fieldName, value);
 	};
 
 	const fieldErrors = errors?.[fieldName] || [];
