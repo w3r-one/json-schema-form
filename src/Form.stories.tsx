@@ -107,8 +107,19 @@ const ObjectField = (props: FieldProps<ObjectFieldSchema>) => {
 export const Basic: Story = {
 	args: {
 		schema,
-		model: {},
 		fieldMapper,
+	},
+};
+
+export const InitialValue: Story = {
+	args: {
+		...Basic.args,
+		initialValue: {
+			user: {
+				email: "john@doe.com",
+				password: "P@ssw0rd123",
+			},
+		},
 	},
 };
 
