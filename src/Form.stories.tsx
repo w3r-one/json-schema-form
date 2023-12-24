@@ -197,7 +197,6 @@ export const Controlled: Story = {
 			user: { email: "john@doe.com", password: "P@ssw0rd123" },
 		});
 
-		console.log(value);
 		return <Form {...args} value={value} onValueChange={setValue} />;
 	},
 };
