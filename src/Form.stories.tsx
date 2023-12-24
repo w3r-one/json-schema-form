@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
 	Form,
 	type FieldMapper,
@@ -5,6 +6,7 @@ import {
 	AutoField,
 	type Components,
 	useFormRequestContext,
+	type Value,
 } from "./Form";
 import type {
 	FieldSchema,
@@ -81,6 +83,7 @@ const fieldMapper: FieldMapper = (fieldSchema: FieldSchema) => {
 };
 
 const TextField = (props: FieldProps<StringFieldSchema>) => {
+	console.log(props.name, props.value);
 	return (
 		<div>
 			<label htmlFor={props.id}>{props.label}</label>
@@ -184,5 +187,17 @@ export const CustomComponents: Story = {
 			Actions: CustomActions,
 			ActionsWrapper: CustomActionsWrapper,
 		},
+	},
+};
+
+export const Controlled: Story = {
+	...Basic,
+	render: (args) => {
+		const [value, setValue] = useState<Value>({
+			user: { email: "john@doe.com", password: "P@ssw0rd123" },
+		});
+
+		console.log(value);
+		return <Form {...args} value={value} onValueChange={setValue} />;
 	},
 };
