@@ -1,10 +1,9 @@
 import { test, expect, describe } from "@jest/globals";
 import { render, screen } from "@testing-library/react";
-import { type Components } from "./Form";
 import { composeStories } from "@storybook/react";
 import * as stories from "./Form.stories";
 
-const { Basic } = composeStories(stories);
+const { Basic, CustomComponents } = composeStories(stories);
 
 test("form element has the given id", () => {
 	const id = "form";
@@ -98,38 +97,22 @@ test("fields are hydrated with values from initialValue prop", () => {
 });
 
 describe("components prop", () => {
-	test("components.RootInner is used when given", () => {
-		const RootInner: Components["RootInner"] = (props) => {
-			return <div data-testid={"RootInner"}>{props.children}</div>;
-		};
+	test("components.Root is used when given", () => {
+		render(<CustomComponents />);
 
-		render(<Basic components={{ RootInner }} />);
-
-		expect(screen.getByTestId("RootInner")).toBeInTheDocument();
+		expect(screen.getByTestId("custom-root")).toBeInTheDocument();
 	});
 
-	test("components.SubmitButton is used when given", () => {
-		const SubmitButton: Components["SubmitButton"] = (props) => {
-			return (
-				<button type={"submit"} data-testid={"SubmitButton"}>
-					{props.children}
-				</button>
-			);
-		};
+	test("components.Actions is used when given", () => {
+		render(<CustomComponents />);
 
-		render(<Basic components={{ SubmitButton }} />);
-
-		expect(screen.getByTestId("SubmitButton")).toBeInTheDocument();
+		expect(screen.getByTestId("custom-actions")).toBeInTheDocument();
 	});
 
-	test("components.SubmitButtonWrapper is used when given", () => {
-		const SubmitButtonWrapper: Components["SubmitButtonWrapper"] = (props) => {
-			return <div data-testid={"SubmitButtonWrapper"}>{props.children}</div>;
-		};
+	test("components.ActionsWrapper is used when given", () => {
+		render(<CustomComponents />);
 
-		render(<Basic components={{ SubmitButtonWrapper }} />);
-
-		expect(screen.getByTestId("SubmitButtonWrapper")).toBeInTheDocument();
+		expect(screen.getByTestId("custom-actions-wrapper")).toBeInTheDocument();
 	});
 });
 

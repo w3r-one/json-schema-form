@@ -40,14 +40,16 @@ export type FormProps<ResponseDataType = unknown> = {
 };
 
 export type Components = {
-	RootInner: ElementType<RootInnerProps>;
-	SubmitButton: ElementType<SubmitButtonProps>;
-	SubmitButtonWrapper: ElementType<SubmitButtonWrapperProps>;
+	Root: ElementType<RootProps>;
+	Actions: ElementType<ActionProps>;
+	ActionsWrapper: ElementType<ActionsWrapperProps>;
 };
 
-type RootInnerProps = { children?: ReactNode };
-type SubmitButtonProps = { children?: ReactNode };
-type SubmitButtonWrapperProps = { children?: ReactNode };
+type RootProps = { children?: ReactNode };
+type ActionProps = {
+	submitLabel: NonNullable<FormProps<unknown>["submitLabel"]>;
+};
+type ActionsWrapperProps = { children?: ReactNode };
 
 export type CompiledFormSchema = FormSchema & {
 	root: true;
@@ -148,14 +150,12 @@ const _Form = <ResponseDataType = unknown,>(
 						{children ? (
 							children
 						) : (
-							<components.RootInner>
+							<components.Root>
 								<AutoField name={name} />
-								<components.SubmitButtonWrapper>
-									<components.SubmitButton>
-										{submitLabel}
-									</components.SubmitButton>
-								</components.SubmitButtonWrapper>
-							</components.RootInner>
+								<components.ActionsWrapper>
+									<components.Actions submitLabel={submitLabel} />
+								</components.ActionsWrapper>
+							</components.Root>
 						)}
 					</form>
 				</FormContext.Provider>
@@ -172,24 +172,20 @@ declare module "react" {
 	): (props: P & React.RefAttributes<T>) => React.ReactElement | null;
 }
 
-const SubmitButton = (props: SubmitButtonProps) => {
+const Actions = (props: ActionProps) => {
 	const request = useFormRequestContext();
 
 	return (
 		<button type="submit" disabled={request.status === "loading"}>
-			{props.children}
+			{props.submitLabel}
 		</button>
 	);
 };
 
-const SubmitButtonWrapper = "div";
-
-const RootInner = "div";
-
 const DEFAULT_COMPONENTS: Components = {
-	RootInner,
-	SubmitButton,
-	SubmitButtonWrapper,
+	Root: "div",
+	Actions,
+	ActionsWrapper: "div",
 };
 
 const FormContext = createContext<FormContextValue | null>(null);
