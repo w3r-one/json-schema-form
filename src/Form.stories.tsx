@@ -1,4 +1,11 @@
-import { Form, type FieldMapper, type FieldProps, AutoField } from "./Form";
+import {
+	Form,
+	type FieldMapper,
+	type FieldProps,
+	AutoField,
+	type Components,
+	useFormRequestContext,
+} from "./Form";
 import type {
 	FieldSchema,
 	FormSchema,
@@ -123,10 +130,59 @@ export const InitialValue: Story = {
 	},
 };
 
-export const CustomSubmitLabel = {
+export const CustomSubmitLabel: Story = {
 	...Basic,
 	args: {
 		...Basic.args,
 		submitLabel: "Plz submit me",
+	},
+};
+
+const CustomRoot: Components["Root"] = (props) => {
+	return (
+		<div
+			style={{ border: "1px solid red", padding: "0.5rem" }}
+			data-testid={"custom-root"}
+		>
+			{props.children}
+		</div>
+	);
+};
+
+const CustomActions: Components["Actions"] = (props) => {
+	const request = useFormRequestContext();
+
+	return (
+		<div
+			style={{ border: "1px solid blue", padding: "0.5rem" }}
+			data-testid={"custom-actions"}
+		>
+			<button type={"button"}>Reset</button>
+			<button type={"submit"} disabled={request.status === "loading"}>
+				{props.submitLabel}
+			</button>
+		</div>
+	);
+};
+
+const CustomActionsWrapper: Components["ActionsWrapper"] = (props) => {
+	return (
+		<div
+			style={{ border: "1px solid green", padding: "0.5rem" }}
+			data-testid={"custom-actions-wrapper"}
+		>
+			{props.children}
+		</div>
+	);
+};
+
+export const CustomComponents: Story = {
+	args: {
+		...Basic.args,
+		components: {
+			Root: CustomRoot,
+			Actions: CustomActions,
+			ActionsWrapper: CustomActionsWrapper,
+		},
 	},
 };
