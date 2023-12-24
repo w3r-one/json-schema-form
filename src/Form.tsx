@@ -440,27 +440,48 @@ type Reset = { type: "reset" };
 export const valueReducer = (value: Value, action: Action) => {
 	switch (action.type) {
 		case "change":
-			return produce(value, (draftValue) => {
-				set(draftValue, action.payload.name, action.payload.value);
-
-				if (shouldResetLinkedFields(action.payload)) {
-					for (const entry of action.payload.linkedFields) {
-						const [linkedFieldName, linkedFieldSchema] = entry;
-
-						let newValue: string | boolean = "";
-
-						if (linkedFieldSchema.type === "boolean") {
-							newValue = false;
-						}
-
-						set(draftValue, linkedFieldName, newValue);
-					}
-				}
-			});
+			return getNextValue(
+				value,
+				action.payload.name,
+				action.payload.value,
+				action.payload.linkedFields,
+			);
 
 		case "reset":
 			return {};
 	}
+};
+
+const getNextValue = (
+	currentValue: Value,
+	updatedFieldName: string,
+	updatedFieldValue: ValueLeaf,
+	linkedFields: Map<string, FieldSchema> | null,
+) => {
+	return produce(currentValue, (draftValue) => {
+		set(draftValue, updatedFieldName, updatedFieldValue);
+
+		if (
+			linkedFields &&
+			shouldResetLinkedFields({
+				linkedFields,
+				name: updatedFieldName,
+				value: updatedFieldValue,
+			})
+		) {
+			for (const entry of linkedFields) {
+				const [linkedFieldName, linkedFieldSchema] = entry;
+
+				let newValue: string | boolean = "";
+
+				if (linkedFieldSchema.type === "boolean") {
+					newValue = false;
+				}
+
+				set(draftValue, linkedFieldName, newValue);
+			}
+		}
+	});
 };
 
 const shouldResetLinkedFields = (
