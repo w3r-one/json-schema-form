@@ -1,9 +1,6 @@
 name: Release
 on:
-  workflow_run:
-    workflows: ["Test and build"]
-    types:
-      - completed
+  push:
     branches:
       - "main"
       - "next"
@@ -25,8 +22,10 @@ jobs:
           node-version: "lts/*"
       - name: Install dependencies
         run: npm ci
-      - name: Build
-        run: npm run build
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test
+      - run: npm run build
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
