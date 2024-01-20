@@ -15,7 +15,7 @@ updates:
             - "@storybook/*"
             - "storybook"
         react:
-	  patterns:
+          patterns:
             - "react"
             - "react-dom"
         typescript-eslint:
