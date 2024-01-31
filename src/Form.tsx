@@ -334,7 +334,7 @@ export const useField = (fieldName: string): FieldProps => {
 	const fieldErrors = errors?.[fieldName] || [];
 
 	return {
-		value: fieldValue ?? fieldSchema.default,
+		value: fieldValue === undefined ? fieldSchema.default : fieldValue,
 		onChange,
 		name: fieldName,
 		id: fieldNameToId(fieldName),
