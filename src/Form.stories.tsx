@@ -15,6 +15,7 @@ import type {
 	StringFieldSchema,
 } from "./types";
 import type { Meta, StoryObj } from "@storybook/react";
+import { fn } from "@storybook/test";
 
 const meta = {
 	title: "Form",
@@ -83,7 +84,6 @@ const fieldMapper: FieldMapper = (fieldSchema: FieldSchema) => {
 };
 
 const TextField = (props: FieldProps<StringFieldSchema>) => {
-	console.log(props.name, props.value);
 	return (
 		<div>
 			<label htmlFor={props.id}>{props.label}</label>
@@ -118,6 +118,10 @@ export const Basic: Story = {
 	args: {
 		schema,
 		fieldMapper,
+		onError: fn(),
+		onSubmit: fn(),
+		onSuccess: fn(),
+		onValueChange: fn(),
 	},
 };
 
