@@ -10,6 +10,7 @@ jobs:
     uses: ./.github/workflows/checks.yaml
 
   release:
+    needs: checks
     name: Release
     runs-on: ubuntu-latest
     permissions:
