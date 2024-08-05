@@ -115,7 +115,7 @@ const _Form = <ResponseDataType = unknown,>(
 	});
 
 	const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-		onSubmit ? onSubmit(e) : null;
+		onSubmit?.(e);
 
 		if (!schema.options.form.async) {
 			return;
@@ -561,7 +561,7 @@ const compileFieldSchema = (fieldSchema: FieldSchema): FieldSchema => {
 				items: Array.isArray(schema.items)
 					? schema.items.map(compileFieldSchema)
 					: /* @ts-expect-error ... */
-					  compileFieldSchema(schema.items),
+						compileFieldSchema(schema.items),
 			}),
 		)
 		.otherwise((schema) => schema);
