@@ -23,7 +23,7 @@
 		"url": "https://github.com/w3r-one/json-schema-form.git"
 	},
 	"peerDependencies": {
-		"react": "^18.2.0"
+		"react": "^19.0.0"
 	},
 	"devDependencies": {
 		"@storybook/addon-essentials": "^8.0.5",
@@ -37,7 +37,7 @@
 		"@testing-library/react": "^16.0.0",
 		"@types/lodash.get": "^4.4.7",
 		"@types/lodash.set": "^4.3.7",
-		"@types/react": "^18.0.35",
+		"@types/react": "^19.0.3",
 		"@typescript-eslint/eslint-plugin": "^8.0.0",
 		"@typescript-eslint/parser": "^8.0.0",
 		"eslint": "^8.39.0",
@@ -48,8 +48,8 @@
 		"jest-environment-jsdom": "^29.5.0",
 		"prettier": "^3.0.1",
 		"prop-types": "^15.8.1",
-		"react": "^18.2.0",
-		"react-dom": "^18.2.0",
+		"react": "^19.0.0",
+		"react-dom": "^19.0.0",
 		"semantic-release": "^24.0.0",
 		"storybook": "^8.0.5",
 		"ts-jest": "^29.1.0",
