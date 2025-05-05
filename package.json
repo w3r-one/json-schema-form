@@ -60,7 +60,7 @@
 		"immer": "^10.0.2",
 		"lodash.get": "^4.4.2",
 		"lodash.set": "^4.3.2",
-		"react-error-boundary": "^4.0.3",
+		"react-error-boundary": "^6.0.0",
 		"remeda": "^2.0.3",
 		"ts-pattern": "^5.0.1"
 	},
