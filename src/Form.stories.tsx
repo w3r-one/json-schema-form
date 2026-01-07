@@ -7,15 +7,15 @@ import {
 	type Components,
 	useFormRequestContext,
 	type Value,
-} from "./Form";
+} from "./Form.js";
 import type {
 	FieldSchema,
 	FormSchema,
 	ObjectFieldSchema,
 	StringFieldSchema,
-} from "./types";
-import type { Meta, StoryObj } from "@storybook/react";
-import { fn } from "@storybook/test";
+} from "./types.ts";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { fn } from "storybook/test";
 
 const meta = {
 	title: "Form",

@@ -1,7 +1,7 @@
-import { test, expect, describe } from "@jest/globals";
 import { render, screen } from "@testing-library/react";
-import { composeStories } from "@storybook/react";
-import * as stories from "./Form.stories";
+import { composeStories } from "@storybook/react-vite";
+import * as stories from "./Form.stories.js";
+import { test, expect, describe } from "vitest";
 
 const { Basic, CustomComponents } = composeStories(stories);
 
@@ -68,7 +68,8 @@ describe("when children is given", () => {
 
 		const properties = Basic.args.schema?.properties || {};
 
-		Object.values(properties).forEach((fieldSchema) => {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		Object.values(properties).forEach((fieldSchema: any) => {
 			expect(
 				screen.queryByLabelText(fieldSchema.title),
 			).not.toBeInTheDocument();
