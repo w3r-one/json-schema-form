@@ -9,7 +9,8 @@
 		"./lib/*"
 	],
 	"scripts": {
-		"test": "vitest --project=unit",
+		"test": "vitest --run --project=unit",
+		"test:watch": "vitest --project=unit",
 		"build": "tsc --project tsconfig.build.json",
 		"lint": "eslint src",
 		"typecheck": "tsc --project tsconfig.build.json",
