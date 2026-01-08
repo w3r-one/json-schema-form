@@ -8,6 +8,10 @@
 	"files": [
 		"./lib/*"
 	],
+	"publishConfig": {
+		"access": "public",
+		"provenance": true
+	},
 	"scripts": {
 		"test": "vitest --run --project=unit",
 		"test:watch": "vitest --project=unit",
