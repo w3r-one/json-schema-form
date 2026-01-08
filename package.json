@@ -6,7 +6,7 @@
 	"main": "./lib/index.js",
 	"types": "./lib/index.d.ts",
 	"files": [
-		"./lib/*"
+		"lib"
 	],
 	"publishConfig": {
 		"access": "public",
@@ -16,6 +16,7 @@
 		"test": "vitest --run --project=unit",
 		"test:watch": "vitest --project=unit",
 		"build": "tsc --project tsconfig.build.json",
+		"prepublishOnly": "npm run build",
 		"lint": "eslint src",
 		"typecheck": "tsc --project tsconfig.build.json",
 		"semantic-release": "semantic-release",
