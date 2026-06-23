@@ -1,7 +1,31 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { composeStories } from "@storybook/react-vite";
 import * as stories from "./Form.stories.js";
 import { test, expect, describe } from "vitest";
+import {
+	AutoField,
+	Form,
+	type FieldMapper,
+	type FieldComponentProps,
+	useField,
+} from "./Form.js";
+
+const renderCounts = new Map<string, number>();
+
+const CountingTextField = ({ name }: FieldComponentProps) => {
+	const field = useField(name);
+	renderCounts.set(name, (renderCounts.get(name) ?? 0) + 1);
+
+	return (
+		<input
+			aria-label={field.name}
+			value={String(field.value ?? "")}
+			onChange={(event) => field.onChange?.(event.currentTarget.value)}
+		/>
+	);
+};
+
+const countingFieldMapper: FieldMapper = () => CountingTextField;
 
 const { Basic, CustomComponents } = composeStories(stories);
 
@@ -139,4 +163,28 @@ test("default value", () => {
 	expect(btn.form).toHaveFormValues({
 		"user[_token]": "csrf-token",
 	});
+});
+
+test("only re-renders the changed field", () => {
+	const schema = Basic.args.schema;
+
+	if (!schema) {
+		throw new Error("Missing test schema");
+	}
+
+	renderCounts.clear();
+	render(
+		<Form schema={schema} fieldMapper={countingFieldMapper}>
+			<AutoField name="user[email]" />
+			<AutoField name="user[password]" />
+		</Form>,
+	);
+
+	const passwordRenderCount = renderCounts.get("user[password]");
+	fireEvent.change(screen.getByLabelText("user[email]"), {
+		target: { value: "john@doe.com" },
+	});
+
+	expect(renderCounts.get("user[email]")).toBeGreaterThan(1);
+	expect(renderCounts.get("user[password]")).toBe(passwordRenderCount);
 });

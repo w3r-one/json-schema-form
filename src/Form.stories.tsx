@@ -2,17 +2,17 @@ import { useState } from "react";
 import {
 	Form,
 	type FieldMapper,
-	type FieldProps,
+	type FieldComponentProps,
 	AutoField,
 	type Components,
+	useField,
+	useFieldMeta,
 	useFormRequestContext,
 	type Value,
 } from "./Form.js";
 import type {
 	FieldSchema,
 	FormSchema,
-	ObjectFieldSchema,
-	StringFieldSchema,
 } from "./types.ts";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
@@ -83,30 +83,38 @@ const fieldMapper: FieldMapper = (fieldSchema: FieldSchema) => {
 	return null;
 };
 
-const TextField = (props: FieldProps<StringFieldSchema>) => {
+const TextField = ({ name, required }: FieldComponentProps) => {
+	const field = useField(name);
+
 	return (
 		<div>
-			<label htmlFor={props.id}>{props.label}</label>
+			<label htmlFor={field.id}>{field.label}</label>
 			<input
-				type={props.schema.options.widget}
-				name={props.name}
-				id={props.id}
-				required={props.required}
-				value={props.value ? String(props.value) : ""}
-				onChange={(e) => props.onChange?.(e.currentTarget.value)}
+				type={field.schema.options.widget}
+				name={field.name}
+				id={field.id}
+				required={required}
+				value={field.value ? String(field.value) : ""}
+				onChange={(e) => field.onChange?.(e.currentTarget.value)}
 			/>
 		</div>
 	);
 };
 
-const ObjectField = (props: FieldProps<ObjectFieldSchema>) => {
+const ObjectField = ({ name }: FieldComponentProps) => {
+	const field = useFieldMeta(name);
+
+	if (field.schema.type !== "object") {
+		throw new Error("ObjectField requires an object schema");
+	}
+
 	return (
 		<fieldset>
-			<legend id={props.id + "_label"}>{props.label}</legend>
-			<div aria-labelledby={props.id + "_label"}>
-				{Object.keys(props.schema.properties).map((fieldName) => {
+			<legend id={field.id + "_label"}>{field.label}</legend>
+			<div aria-labelledby={field.id + "_label"}>
+				{Object.keys(field.schema.properties).map((fieldName) => {
 					return (
-						<AutoField key={fieldName} name={`${props.name}[${fieldName}]`} />
+						<AutoField key={fieldName} name={`${field.name}[${fieldName}]`} />
 					);
 				})}
 			</div>
