@@ -4,17 +4,21 @@ import {
 	type FormEvent,
 	type ForwardedRef,
 	forwardRef,
+	memo,
 	type ReactNode,
 	useContext,
 	useEffect,
 	useMemo,
 	useReducer,
 	useCallback,
+	useLayoutEffect,
+	useRef,
+	useSyncExternalStore,
 } from "react";
-import get from "lodash.get";
 import set from "lodash.set";
 import { setAutoFreeze, produce } from "immer";
 import type { FieldDependency, FieldSchema, FormSchema } from "./types.js";
+import { FormStore } from "./FormStore.js";
 import { ErrorBoundary } from "react-error-boundary";
 import { match, P } from "ts-pattern";
 import * as R from "remeda";
@@ -59,6 +63,7 @@ export type CompiledFormSchema = FormSchema & {
 export type Value = Record<string, ValueLeaf>;
 export type ValueLeaf =
 	| string
+	| number
 	| Array<string>
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	| Array<any>
@@ -93,20 +98,24 @@ const _Form = <ResponseDataType = unknown,>(
 
 	const method = schema.options.form.method;
 
-	const [internalValue, dispatch] = useReducer(
-		valueReducerProps || valueReducer,
-		initialValue ?? {},
-	);
-
-	const value = valueProps ?? internalValue;
-
 	const isControlled = valueProps !== undefined && onValueChange !== undefined;
+	const storeRef = useRef<FormStore | null>(null);
 
-	useEffect(() => {
-		if (onValueChange && !isControlled) {
-			onValueChange(internalValue);
+	if (storeRef.current === null) {
+		storeRef.current = new FormStore(
+			valueProps ?? initialValue ?? {},
+			initialErrors,
+		);
+	}
+
+	const store = storeRef.current;
+	store.configure({ isControlled, onValueChange });
+
+	useLayoutEffect(() => {
+		if (isControlled && valueProps !== undefined) {
+			store.synchronizeValue(valueProps);
 		}
-	}, [internalValue, isControlled]);
+	}, [isControlled, store, valueProps]);
 
 	const [request, sendRequest] = useFormRequest<ResponseDataType>({
 		onSuccess,
@@ -133,27 +142,42 @@ const _Form = <ResponseDataType = unknown,>(
 			request.error.errors) ||
 		null;
 
+	useEffect(() => {
+		store.replaceErrors(errors);
+	}, [errors, store]);
+
 	const handleReset = () => {
-		dispatch({ type: "reset" });
+		store.replaceValue(
+			valueReducerProps
+				? valueReducerProps(store.getValue(), { type: "reset" })
+				: {},
+		);
 	};
 
-	const handleFieldChange = (name: string, fieldValue: ValueLeaf) => {
-		const linkedFields = getLinkedFields(schema, name) as Map<
-			string,
-			FieldSchema
-		> | null;
+	const handleFieldChange = useCallback(
+		(name: string, fieldValue: ValueLeaf) => {
+			const linkedFields = getLinkedFields(schema, name) as Map<
+				string,
+				FieldSchema
+			> | null;
 
-		if (isControlled) {
-			onValueChange(getNextValue(value, name, fieldValue, linkedFields));
-		} else {
-			dispatch({
+			const action: Change = {
 				type: "change",
 				payload: { name, value: fieldValue, linkedFields },
-			});
-		}
-	};
+			};
+			store.replaceValue(
+				valueReducerProps
+					? valueReducerProps(store.getValue(), action)
+					: getNextValue(store.getValue(), name, fieldValue, linkedFields),
+			);
+		},
+		[schema, store, valueReducerProps],
+	);
 
-	const context = { schema, value, handleFieldChange, errors };
+	const context = useMemo(
+		() => ({ schema, store, handleFieldChange }),
+		[handleFieldChange, schema, store],
+	);
 
 	const components = { ...DEFAULT_COMPONENTS, ...componentsProps };
 
@@ -214,9 +238,8 @@ const FormContext = createContext<FormContextValue | null>(null);
 
 type FormContextValue = {
 	schema: FormSchema;
-	value: Value;
+	store: FormStore;
 	handleFieldChange: (name: string, value: ValueLeaf) => void;
-	errors: FormErrors | null;
 };
 
 export const useForm = () => {
@@ -225,10 +248,28 @@ export const useForm = () => {
 		throw new Error(`useForm must be used in a Form`);
 	}
 
-	return context;
+	const value = useSyncExternalStore(
+		context.store.subscribeToAllValues,
+		context.store.getValue,
+		context.store.getValue,
+	);
+	const errors = useSyncExternalStore(
+		context.store.subscribeToAllErrors,
+		context.store.getErrors,
+		context.store.getErrors,
+	);
+
+	return { ...context, value, errors };
 };
 
-export type FieldMapper = (fieldSchema: FieldSchema) => ElementType | null;
+export type FieldComponentProps = {
+	name: string;
+	required?: boolean;
+};
+
+export type FieldMapper = (
+	fieldSchema: FieldSchema,
+) => ElementType<FieldComponentProps> | null;
 
 type AutoFieldProps = {
 	name: string;
@@ -236,17 +277,19 @@ type AutoFieldProps = {
 };
 
 const LinkedField = ({
-	field,
+	name,
+	schema,
 	component: Component,
 	required,
 }: {
-	field: FieldProps;
-	component: ElementType;
+	name: string;
+	schema: FieldSchema;
+	component: ElementType<FieldComponentProps>;
 	required: boolean;
 }) => {
 	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-	const dependency = field.schema.options.dependencies![0];
-	const parentFieldName = getParentName(field.name);
+	const dependency = schema.options.dependencies![0];
+	const parentFieldName = getParentName(name);
 	const linkedFieldName = `${parentFieldName}[${dependency.property}]`;
 
 	const linkedField = useField(linkedFieldName);
@@ -256,7 +299,7 @@ const LinkedField = ({
 		shouldShowField(dependency, linkedField.value);
 
 	if (shouldShow) {
-		return <Component {...field} required={required} />;
+		return <Component name={name} required={required} />;
 	}
 
 	return null;
@@ -321,43 +364,96 @@ const partsToName = (parts: Array<string>) => {
 	}, "");
 };
 
-export const useField = (fieldName: string): FieldProps => {
-	const { schema, value, handleFieldChange, errors } = useForm();
+export const useFieldMeta = <SchemaType extends FieldSchema = FieldSchema>(
+	fieldName: string,
+): FieldMeta<SchemaType> => {
+	const context = useContext(FormContext);
 
-	const fieldSchema = getFieldSchema(schema, fieldName);
-	const fieldValue = getFieldValue(value, fieldName);
+	if (!context) {
+		throw new Error(`useFieldMeta must be used in a Form`);
+	}
 
-	const onChange = (value: ValueLeaf) => {
-		handleFieldChange(fieldName, value);
-	};
-
-	const fieldErrors = errors?.[fieldName] || [];
+	const fieldSchema = getFieldSchema(
+		context.schema,
+		fieldName,
+	) as unknown as SchemaType;
 
 	return {
-		value: fieldValue === undefined ? fieldSchema.default : fieldValue,
-		onChange,
 		name: fieldName,
 		id: fieldNameToId(fieldName),
 		schema: fieldSchema,
 		label: fieldSchema.title,
 		description: fieldSchema.description,
+	};
+};
+
+export const useField = (fieldName: string): FieldState => {
+	const context = useContext(FormContext);
+
+	if (!context) {
+		throw new Error(`useField must be used in a Form`);
+	}
+
+	const { store, handleFieldChange } = context;
+	const field = useFieldMeta(fieldName);
+	const subscribeToValue = useCallback(
+		(listener: () => void) => store.subscribeToFieldValue(fieldName, listener),
+		[fieldName, store],
+	);
+	const getValue = useCallback(
+		() => store.getFieldValue(fieldName),
+		[fieldName, store],
+	);
+	const subscribeToErrors = useCallback(
+		(listener: () => void) => store.subscribeToFieldErrors(fieldName, listener),
+		[fieldName, store],
+	);
+	const getErrors = useCallback(
+		() => store.getFieldErrors(fieldName),
+		[fieldName, store],
+	);
+	const fieldValue = useSyncExternalStore(subscribeToValue, getValue, getValue);
+	const fieldErrors = useSyncExternalStore(
+		subscribeToErrors,
+		getErrors,
+		getErrors,
+	);
+
+	const onChange = useCallback(
+		(value: ValueLeaf) => {
+			handleFieldChange(fieldName, value);
+		},
+		[fieldName, handleFieldChange],
+	);
+
+	const defaultValue =
+		"default" in field.schema ? field.schema.default : undefined;
+	const value = fieldValue ?? defaultValue;
+
+	return {
+		...field,
+		...(value === undefined ? {} : { value }),
+		onChange,
 		errors: fieldErrors,
 	};
 };
 
-export type FieldProps<SchemaType = FieldSchema> = {
-	value?: ValueLeaf;
-	defaultValue?: ValueLeaf;
-	onChange?: (value: ValueLeaf) => void;
+export type FieldMeta<SchemaType extends FieldSchema = FieldSchema> = {
 	name: string;
 	id: string;
 	label: string;
-	description?: string;
+	description?: string | undefined;
 	schema: SchemaType;
-	errors: Array<string>;
-	placeholder?: string;
-	required?: boolean;
 };
+
+export type FieldState<SchemaType extends FieldSchema = FieldSchema> =
+	FieldMeta<SchemaType> & {
+		value?: ValueLeaf;
+		defaultValue?: ValueLeaf;
+		onChange?: (value: ValueLeaf) => void;
+		errors: Array<string>;
+		placeholder?: string;
+	};
 
 export const getFieldSchema = (schema: FormSchema, fieldName: string) => {
 	if (fieldName === schema.title) {
@@ -419,23 +515,6 @@ const fieldNameToId = (fieldName: string): string => {
 	}
 
 	return parts.join("_");
-};
-
-const getFieldValue = (value: Value, fieldName: string) => {
-	const path = fieldNameToValuePath(fieldName);
-	const fieldValue = get(value, path);
-
-	return fieldValue;
-};
-
-const fieldNameToValuePath = (fieldName: string): string => {
-	const parts = getFieldNameParts(fieldName);
-
-	if (!parts) {
-		return "";
-	}
-
-	return parts.join(".");
 };
 
 type Action = Change | Reset;
@@ -733,8 +812,11 @@ export const useFieldMapper = () => {
 	return ctx;
 };
 
-export const AutoField = ({ name, required = false }: AutoFieldProps) => {
-	const field = useField(name);
+export const AutoField = memo(function AutoFieldRaw({
+	name,
+	required = false,
+}: AutoFieldProps) {
+	const field = useFieldMeta(name);
 	const fieldMapper = useFieldMapper();
 	const FieldComponent = fieldMapper(field.schema);
 
@@ -755,7 +837,8 @@ export const AutoField = ({ name, required = false }: AutoFieldProps) => {
 		return (
 			<ErrorBoundary FallbackComponent={LinkedFieldError}>
 				<LinkedField
-					field={field}
+					name={name}
+					schema={field.schema}
 					component={FieldComponent}
 					required={required}
 				/>
@@ -763,8 +846,8 @@ export const AutoField = ({ name, required = false }: AutoFieldProps) => {
 		);
 	}
 
-	return <FieldComponent {...field} required={required} />;
-};
+	return <FieldComponent name={name} required={required} />;
+});
 
 const FormRequestContext = createContext<FormRequest<unknown> | undefined>(
 	undefined,
