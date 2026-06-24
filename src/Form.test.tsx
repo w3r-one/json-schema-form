@@ -5,6 +5,7 @@ import { test, expect, describe } from "vitest";
 import {
 	AutoField,
 	Form,
+	FormRest,
 	type FieldMapper,
 	type FieldComponentProps,
 	useField,
@@ -26,6 +27,21 @@ const CountingTextField = ({ name }: FieldComponentProps) => {
 };
 
 const countingFieldMapper: FieldMapper = () => CountingTextField;
+
+const FormWithRest = ({ renderToken }: { renderToken: boolean }) => {
+	const schema = Basic.args.schema;
+
+	if (!schema) {
+		throw new Error("Missing test schema");
+	}
+
+	return (
+		<Form schema={schema} fieldMapper={countingFieldMapper}>
+			{renderToken && <AutoField name="user[_token]" />}
+			<FormRest name="user" />
+		</Form>
+	);
+};
 
 const { Basic, CustomComponents } = composeStories(stories);
 
@@ -162,6 +178,26 @@ test("default value", () => {
 
 	expect(btn.form).toHaveFormValues({
 		"user[_token]": "csrf-token",
+	});
+});
+
+describe("FormRest", () => {
+	test("renders properties that are not manually rendered", () => {
+		render(<FormWithRest renderToken={true} />);
+
+		expect(screen.getAllByLabelText("user[_token]")).toHaveLength(1);
+		expect(screen.getByLabelText("user[email]")).toBeInTheDocument();
+		expect(screen.getByLabelText("user[password]")).toBeInTheDocument();
+	});
+
+	test("renders a property when its manual AutoField is unmounted", () => {
+		const { rerender } = render(<FormWithRest renderToken={true} />);
+
+		expect(screen.getAllByLabelText("user[_token]")).toHaveLength(1);
+
+		rerender(<FormWithRest renderToken={false} />);
+
+		expect(screen.getAllByLabelText("user[_token]")).toHaveLength(1);
 	});
 });
 
