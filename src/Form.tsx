@@ -100,6 +100,7 @@ const _Form = <ResponseDataType = unknown,>(
 
 	const isControlled = valueProps !== undefined && onValueChange !== undefined;
 	const storeRef = useRef<FormStore | null>(null);
+	const renderedFieldRegistryRef = useRef<RenderedFieldRegistry | null>(null);
 
 	if (storeRef.current === null) {
 		storeRef.current = new FormStore(
@@ -107,8 +108,12 @@ const _Form = <ResponseDataType = unknown,>(
 			initialErrors,
 		);
 	}
+	if (renderedFieldRegistryRef.current === null) {
+		renderedFieldRegistryRef.current = new RenderedFieldRegistry();
+	}
 
 	const store = storeRef.current;
+	const renderedFieldRegistry = renderedFieldRegistryRef.current;
 	store.configure({ isControlled, onValueChange });
 
 	useLayoutEffect(() => {
@@ -184,8 +189,9 @@ const _Form = <ResponseDataType = unknown,>(
 	return (
 		<FieldMapperContext.Provider value={fieldMapper}>
 			<FormRequestContext.Provider value={request}>
-				<FormContext.Provider value={context}>
-					<form
+				<RenderedFieldRegistryContext.Provider value={renderedFieldRegistry}>
+					<FormContext.Provider value={context}>
+						<form
 						action={action}
 						method={method}
 						onSubmit={handleSubmit}
@@ -203,8 +209,9 @@ const _Form = <ResponseDataType = unknown,>(
 								</components.ActionsWrapper>
 							</components.Root>
 						)}
-					</form>
-				</FormContext.Provider>
+						</form>
+					</FormContext.Provider>
+				</RenderedFieldRegistryContext.Provider>
 			</FormRequestContext.Provider>
 		</FieldMapperContext.Provider>
 	);
@@ -274,6 +281,61 @@ export type FieldMapper = (
 type AutoFieldProps = {
 	name: string;
 	required?: boolean;
+};
+
+export type FormRestProps = {
+	name: string;
+};
+
+type RenderedFieldListener = () => void;
+
+class RenderedFieldRegistry {
+	private readonly fieldCounts = new Map<string, number>();
+	private readonly listeners = new Set<RenderedFieldListener>();
+	private fieldNames = new Set<string>();
+
+	register(fieldName: string) {
+		this.fieldCounts.set(fieldName, (this.fieldCounts.get(fieldName) ?? 0) + 1);
+		this.updateFieldNames();
+
+		return () => {
+			const count = this.fieldCounts.get(fieldName);
+			if (count === undefined || count === 1) {
+				this.fieldCounts.delete(fieldName);
+			} else {
+				this.fieldCounts.set(fieldName, count - 1);
+			}
+			this.updateFieldNames();
+		};
+	}
+
+	subscribe = (listener: RenderedFieldListener) => {
+		this.listeners.add(listener);
+		return () => this.listeners.delete(listener);
+	};
+
+	getFieldNames = () => this.fieldNames;
+
+	private updateFieldNames() {
+		this.fieldNames = new Set(this.fieldCounts.keys());
+		for (const listener of this.listeners) {
+			listener();
+		}
+	}
+}
+
+const RenderedFieldRegistryContext =
+	createContext<RenderedFieldRegistry | null>(null);
+const IsFormRestFieldContext = createContext(false);
+
+const useRenderedFieldRegistry = () => {
+	const registry = useContext(RenderedFieldRegistryContext);
+
+	if (registry === null) {
+		throw new Error(`Rendered field registry must be used in a Form`);
+	}
+
+	return registry;
 };
 
 const LinkedField = ({
@@ -818,7 +880,17 @@ export const AutoField = memo(function AutoFieldRaw({
 }: AutoFieldProps) {
 	const field = useFieldMeta(name);
 	const fieldMapper = useFieldMapper();
+	const renderedFieldRegistry = useRenderedFieldRegistry();
+	const isFormRestField = useContext(IsFormRestFieldContext);
 	const FieldComponent = fieldMapper(field.schema);
+
+	useLayoutEffect(() => {
+		if (isFormRestField) {
+			return;
+		}
+
+		return renderedFieldRegistry.register(name);
+	}, [isFormRestField, name, renderedFieldRegistry]);
 
 	useEffect(() => {
 		if (!FieldComponent) {
@@ -847,6 +919,44 @@ export const AutoField = memo(function AutoFieldRaw({
 	}
 
 	return <FieldComponent name={name} required={required} />;
+});
+
+export const FormRest = memo(function FormRest({ name }: FormRestProps) {
+	const field = useFieldMeta(name);
+	const renderedFieldRegistry = useRenderedFieldRegistry();
+	const renderedFieldNames = useSyncExternalStore(
+		renderedFieldRegistry.subscribe,
+		renderedFieldRegistry.getFieldNames,
+		renderedFieldRegistry.getFieldNames,
+	);
+
+	if (field.schema.type !== "object") {
+		throw new Error(`FormRest requires an object field: ${name}`);
+	}
+	const requiredProperties =
+		"required" in field.schema && Array.isArray(field.schema.required)
+			? field.schema.required
+			: [];
+
+	return (
+		<IsFormRestFieldContext.Provider value={true}>
+			{Object.keys(field.schema.properties).map((propertyName) => {
+				const fieldName = `${name}[${propertyName}]`;
+
+				if (renderedFieldNames.has(fieldName)) {
+					return null;
+				}
+
+				return (
+					<AutoField
+						key={fieldName}
+						name={fieldName}
+						required={requiredProperties.includes(propertyName)}
+					/>
+				);
+			})}
+		</IsFormRestFieldContext.Provider>
+	);
 });
 
 const FormRequestContext = createContext<FormRequest<unknown> | undefined>(
