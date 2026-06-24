@@ -4,16 +4,14 @@ import {
 	type FieldMapper,
 	type FieldComponentProps,
 	AutoField,
+	FormRest,
 	type Components,
 	useField,
 	useFieldMeta,
 	useFormRequestContext,
 	type Value,
 } from "./Form.js";
-import type {
-	FieldSchema,
-	FormSchema,
-} from "./types.ts";
+import type { FieldSchema, FormSchema } from "./types.ts";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
 
@@ -210,5 +208,43 @@ export const Controlled: Story = {
 		});
 
 		return <Form {...args} value={value} onValueChange={setValue} />;
+	},
+};
+
+const restFieldMapper: FieldMapper = (fieldSchema: FieldSchema) => {
+	if (fieldSchema.type === "string") {
+		return TextField;
+	}
+
+	if (fieldSchema.type === "object") {
+		return ObjectFieldWithRest;
+	}
+
+	return null;
+};
+
+const ObjectFieldWithRest = ({ name }: FieldComponentProps) => {
+	const field = useFieldMeta(name);
+
+	if (field.schema.type !== "object") {
+		throw new Error("ObjectField requires an object schema");
+	}
+
+	return (
+		<fieldset>
+			<legend id={field.id + "_label"}>{field.label}</legend>
+			<div aria-labelledby={field.id + "_label"}>
+				<AutoField name={`${field.name}[_token]`} />
+				<FormRest name={field.name} />
+			</div>
+		</fieldset>
+	);
+};
+
+export const Rest: Story = {
+	...Basic,
+	args: {
+		...Basic.args,
+		fieldMapper: restFieldMapper,
 	},
 };
