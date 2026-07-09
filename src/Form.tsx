@@ -289,6 +289,25 @@ export type FormRestProps = {
 
 type RenderedFieldListener = () => void;
 
+const isFieldOrDescendantRendered = (
+	renderedFieldNames: Set<string>,
+	fieldName: string,
+) => {
+	if (renderedFieldNames.has(fieldName)) {
+		return true;
+	}
+
+	const descendantFieldPrefix = `${fieldName}[`;
+
+	for (const renderedFieldName of renderedFieldNames) {
+		if (renderedFieldName.startsWith(descendantFieldPrefix)) {
+			return true;
+		}
+	}
+
+	return false;
+};
+
 class RenderedFieldRegistry {
 	private readonly fieldCounts = new Map<string, number>();
 	private readonly listeners = new Set<RenderedFieldListener>();
@@ -943,7 +962,7 @@ export const FormRest = memo(function FormRest({ name }: FormRestProps) {
 			{Object.keys(field.schema.properties).map((propertyName) => {
 				const fieldName = `${name}[${propertyName}]`;
 
-				if (renderedFieldNames.has(fieldName)) {
+				if (isFieldOrDescendantRendered(renderedFieldNames, fieldName)) {
 					return null;
 				}
 
