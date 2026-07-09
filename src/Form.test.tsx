@@ -10,6 +10,7 @@ import {
 	type FieldComponentProps,
 	useField,
 } from "./Form.js";
+import type { FormSchema } from "./types.js";
 
 const renderCounts = new Map<string, number>();
 
@@ -27,6 +28,30 @@ const CountingTextField = ({ name }: FieldComponentProps) => {
 };
 
 const countingFieldMapper: FieldMapper = () => CountingTextField;
+
+const ObjectField = ({ name }: FieldComponentProps) => {
+	const field = useField(name);
+
+	if (field.schema.type !== "object") {
+		throw new Error("ObjectField requires an object schema");
+	}
+
+	return (
+		<div>
+			{Object.keys(field.schema.properties).map((fieldName) => (
+				<AutoField key={fieldName} name={`${field.name}[${fieldName}]`} />
+			))}
+		</div>
+	);
+};
+
+const textAndObjectFieldMapper: FieldMapper = (fieldSchema) => {
+	if (fieldSchema.type === "object") {
+		return ObjectField;
+	}
+
+	return CountingTextField;
+};
 
 const FormWithRest = ({ renderToken }: { renderToken: boolean }) => {
 	const schema = Basic.args.schema;
@@ -198,6 +223,77 @@ describe("FormRest", () => {
 		rerender(<FormWithRest renderToken={false} />);
 
 		expect(screen.getAllByLabelText("user[_token]")).toHaveLength(1);
+	});
+
+	test("does not render a parent property when a descendant is manually rendered", () => {
+		const schema: FormSchema = {
+			$id: "",
+			$schema: "",
+			title: "site",
+			type: "object",
+			properties: {
+				name: {
+					type: "string",
+					title: "Name",
+					options: {
+						layout: "default",
+						widget: "text",
+					},
+				},
+				interestPoint: {
+					type: "object",
+					title: "Interest point",
+					properties: {
+						note: {
+							type: "string",
+							title: "Note",
+							options: {
+								layout: "default",
+								widget: "text",
+							},
+						},
+						waterType: {
+							type: "string",
+							title: "Water type",
+							options: {
+								layout: "default",
+								widget: "text",
+							},
+						},
+					},
+					options: {
+						layout: "default",
+						widget: "test",
+					},
+				},
+			},
+			required: [],
+			options: {
+				layout: "default",
+				widget: "test",
+				form: {
+					action: "http://localhost/site",
+					method: "POST",
+					async: true,
+				},
+			},
+		};
+
+		render(
+			<Form schema={schema} fieldMapper={textAndObjectFieldMapper}>
+				<AutoField name="site[interestPoint][note]" />
+				<FormRest name="site[interestPoint]" />
+				<FormRest name="site" />
+			</Form>,
+		);
+
+		expect(screen.getAllByLabelText("site[interestPoint][note]")).toHaveLength(
+			1,
+		);
+		expect(
+			screen.getAllByLabelText("site[interestPoint][waterType]"),
+		).toHaveLength(1);
+		expect(screen.getAllByLabelText("site[name]")).toHaveLength(1);
 	});
 });
 
