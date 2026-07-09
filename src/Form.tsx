@@ -308,6 +308,17 @@ const isFieldOrDescendantRendered = (
 	return false;
 };
 
+const getUnrenderedPropertyNames = (
+	properties: Record<string, FieldSchema>,
+	name: string,
+	renderedFieldNames: Set<string>,
+) =>
+	Object.keys(properties).filter((propertyName) => {
+		const fieldName = `${name}[${propertyName}]`;
+
+		return !isFieldOrDescendantRendered(renderedFieldNames, fieldName);
+	});
+
 class RenderedFieldRegistry {
 	private readonly fieldCounts = new Map<string, number>();
 	private readonly listeners = new Set<RenderedFieldListener>();
@@ -940,6 +951,28 @@ export const AutoField = memo(function AutoFieldRaw({
 	return <FieldComponent name={name} required={required} />;
 });
 
+export const useHasUnrenderedFields = (name: string) => {
+	const field = useFieldMeta(name);
+	const renderedFieldRegistry = useRenderedFieldRegistry();
+	const renderedFieldNames = useSyncExternalStore(
+		renderedFieldRegistry.subscribe,
+		renderedFieldRegistry.getFieldNames,
+		renderedFieldRegistry.getFieldNames,
+	);
+
+	if (field.schema.type !== "object") {
+		throw new Error(`useHasUnrenderedFields requires an object field: ${name}`);
+	}
+
+	return (
+		getUnrenderedPropertyNames(
+			field.schema.properties,
+			name,
+			renderedFieldNames,
+		).length > 0
+	);
+};
+
 export const FormRest = memo(function FormRest({ name }: FormRestProps) {
 	const field = useFieldMeta(name);
 	const renderedFieldRegistry = useRenderedFieldRegistry();
@@ -952,6 +985,12 @@ export const FormRest = memo(function FormRest({ name }: FormRestProps) {
 	if (field.schema.type !== "object") {
 		throw new Error(`FormRest requires an object field: ${name}`);
 	}
+
+	const unrenderedPropertyNames = getUnrenderedPropertyNames(
+		field.schema.properties,
+		name,
+		renderedFieldNames,
+	);
 	const requiredProperties =
 		"required" in field.schema && Array.isArray(field.schema.required)
 			? field.schema.required
@@ -959,12 +998,8 @@ export const FormRest = memo(function FormRest({ name }: FormRestProps) {
 
 	return (
 		<IsFormRestFieldContext.Provider value={true}>
-			{Object.keys(field.schema.properties).map((propertyName) => {
+			{unrenderedPropertyNames.map((propertyName) => {
 				const fieldName = `${name}[${propertyName}]`;
-
-				if (isFieldOrDescendantRendered(renderedFieldNames, fieldName)) {
-					return null;
-				}
 
 				return (
 					<AutoField
