@@ -9,6 +9,7 @@ import {
 	type FieldMapper,
 	type FieldComponentProps,
 	useField,
+	useHasUnrenderedFields,
 } from "./Form.js";
 import type { FormSchema } from "./types.js";
 
@@ -65,6 +66,16 @@ const FormWithRest = ({ renderToken }: { renderToken: boolean }) => {
 			{renderToken && <AutoField name="user[_token]" />}
 			<FormRest name="user" />
 		</Form>
+	);
+};
+
+const HasUnrenderedFieldsStatus = ({ name }: { name: string }) => {
+	const hasUnrenderedFields = useHasUnrenderedFields(name);
+
+	return (
+		<p>
+			{name}: {hasUnrenderedFields ? "yes" : "no"}
+		</p>
 	);
 };
 
@@ -294,6 +305,44 @@ describe("FormRest", () => {
 			screen.getAllByLabelText("site[interestPoint][waterType]"),
 		).toHaveLength(1);
 		expect(screen.getAllByLabelText("site[name]")).toHaveLength(1);
+	});
+});
+
+describe("useHasUnrenderedFields", () => {
+	test("returns whether an object field still has unrendered direct properties", () => {
+		const schema = Basic.args.schema;
+
+		if (!schema) {
+			throw new Error("Missing test schema");
+		}
+
+		render(
+			<Form schema={schema} fieldMapper={countingFieldMapper}>
+				<AutoField name="user[_token]" />
+				<HasUnrenderedFieldsStatus name="user" />
+			</Form>,
+		);
+
+		expect(screen.getByText("user: yes")).toBeInTheDocument();
+	});
+
+	test("returns false when all direct properties are manually rendered", () => {
+		const schema = Basic.args.schema;
+
+		if (!schema) {
+			throw new Error("Missing test schema");
+		}
+
+		render(
+			<Form schema={schema} fieldMapper={countingFieldMapper}>
+				<AutoField name="user[_token]" />
+				<AutoField name="user[email]" />
+				<AutoField name="user[password]" />
+				<HasUnrenderedFieldsStatus name="user" />
+			</Form>,
+		);
+
+		expect(screen.getByText("user: no")).toBeInTheDocument();
 	});
 });
 
