@@ -8,10 +8,11 @@ import {
 	FormRest,
 	type FieldMapper,
 	type FieldComponentProps,
+	type ValueLeaf,
 	useField,
 	useHasUnrenderedFields,
 } from "./Form.js";
-import type { FormSchema } from "./types.js";
+import type { FieldDependency, FieldSchema, FormSchema } from "./types.js";
 
 const renderCounts = new Map<string, number>();
 
@@ -77,6 +78,109 @@ const HasUnrenderedFieldsStatus = ({ name }: { name: string }) => {
 			{name}: {hasUnrenderedFields ? "yes" : "no"}
 		</p>
 	);
+};
+
+const dependencyModeCases: Array<{
+	mode: FieldDependency["mode"];
+	dependencyValue: FieldDependency["value"];
+	visibleValue: ValueLeaf;
+	hiddenValue: ValueLeaf;
+}> = [
+	{
+		mode: "equal",
+		dependencyValue: "expected",
+		visibleValue: "expected",
+		hiddenValue: "other",
+	},
+	{
+		mode: "equal",
+		dependencyValue: ["expected", "alternative"],
+		visibleValue: "alternative",
+		hiddenValue: "other",
+	},
+	{
+		mode: "not_equal",
+		dependencyValue: "expected",
+		visibleValue: "other",
+		hiddenValue: "expected",
+	},
+	{
+		mode: "not_equal",
+		dependencyValue: ["expected", "alternative"],
+		visibleValue: "other",
+		hiddenValue: "alternative",
+	},
+	{
+		mode: "in",
+		dependencyValue: "expected",
+		visibleValue: ["expected"],
+		hiddenValue: ["other"],
+	},
+	{
+		mode: "not_in",
+		dependencyValue: "expected",
+		visibleValue: ["other"],
+		hiddenValue: ["expected"],
+	},
+];
+
+const createLinkedFieldSchema = (
+	mode: FieldDependency["mode"],
+	dependencyValue: FieldDependency["value"],
+): FormSchema => {
+	const controllerSchema: FieldSchema =
+		mode === "in" || mode === "not_in"
+			? {
+					type: "array",
+					title: "Controller",
+					options: {
+						layout: "default",
+						widget: "choice",
+					},
+				}
+			: {
+					type: "string",
+					title: "Controller",
+					options: {
+						layout: "default",
+						widget: "text",
+					},
+				};
+
+	return {
+		$id: "",
+		$schema: "",
+		title: "settings",
+		type: "object",
+		properties: {
+			controller: controllerSchema,
+			dependent: {
+				type: "string",
+				title: "Dependent",
+				options: {
+					layout: "default",
+					widget: "text",
+					dependencies: [
+						{
+							property: "controller",
+							value: dependencyValue,
+							mode,
+						},
+					],
+				},
+			},
+		},
+		required: [],
+		options: {
+			layout: "default",
+			widget: "test",
+			form: {
+				action: "http://localhost/settings",
+				method: "POST",
+				async: true,
+			},
+		},
+	};
 };
 
 const { Basic, CustomComponents } = composeStories(stories);
@@ -216,6 +320,45 @@ test("default value", () => {
 		"user[_token]": "csrf-token",
 	});
 });
+
+describe.each(dependencyModeCases)(
+	"linked fields with $mode dependencies",
+	({ mode, dependencyValue, visibleValue, hiddenValue }) => {
+		test("renders the dependent field when the condition is satisfied", () => {
+			render(
+				<Form
+					schema={createLinkedFieldSchema(mode, dependencyValue)}
+					fieldMapper={countingFieldMapper}
+					initialValue={{ settings: { controller: visibleValue } }}
+				>
+					<AutoField name="settings[controller]" />
+					<AutoField name="settings[dependent]" />
+				</Form>,
+			);
+
+			expect(
+				screen.getByLabelText("settings[dependent]"),
+			).toBeInTheDocument();
+		});
+
+		test("hides the dependent field when the condition is not satisfied", () => {
+			render(
+				<Form
+					schema={createLinkedFieldSchema(mode, dependencyValue)}
+					fieldMapper={countingFieldMapper}
+					initialValue={{ settings: { controller: hiddenValue } }}
+				>
+					<AutoField name="settings[controller]" />
+					<AutoField name="settings[dependent]" />
+				</Form>,
+			);
+
+			expect(
+				screen.queryByLabelText("settings[dependent]"),
+			).not.toBeInTheDocument();
+		});
+	},
+);
 
 describe("FormRest", () => {
 	test("renders properties that are not manually rendered", () => {

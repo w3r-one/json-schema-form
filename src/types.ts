@@ -16,7 +16,7 @@ type FieldOptions = {
 
 export type FieldDependency = {
 	property: string;
-	value: string;
+	value: string | Array<string>;
 	mode: "equal" | "not_equal" | "in" | "not_in";
 };
 

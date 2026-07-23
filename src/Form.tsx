@@ -192,23 +192,23 @@ const _Form = <ResponseDataType = unknown,>(
 				<RenderedFieldRegistryContext.Provider value={renderedFieldRegistry}>
 					<FormContext.Provider value={context}>
 						<form
-						action={action}
-						method={method}
-						onSubmit={handleSubmit}
-						onReset={handleReset}
-						ref={ref}
-						id={id}
-					>
-						{children ? (
-							children
-						) : (
-							<components.Root>
-								<AutoField name={name} />
-								<components.ActionsWrapper>
-									<components.Actions submitLabel={submitLabel} />
-								</components.ActionsWrapper>
-							</components.Root>
-						)}
+							action={action}
+							method={method}
+							onSubmit={handleSubmit}
+							onReset={handleReset}
+							ref={ref}
+							id={id}
+						>
+							{children ? (
+								children
+							) : (
+								<components.Root>
+									<AutoField name={name} />
+									<components.ActionsWrapper>
+										<components.Actions submitLabel={submitLabel} />
+									</components.ActionsWrapper>
+								</components.Root>
+							)}
 						</form>
 					</FormContext.Provider>
 				</RenderedFieldRegistryContext.Provider>
@@ -404,11 +404,13 @@ const shouldShowField = (
 	switch (dependency.mode) {
 		case "equal":
 			return Array.isArray(dependency.value)
-				? dependency.value.includes(dependencyValue)
+				? dependency.value.some((value) => value === dependencyValue)
 				: dependencyValue === dependency.value;
 
 		case "not_equal":
-			return Boolean(dependencyValue) && dependencyValue !== dependency.value;
+			return Array.isArray(dependency.value)
+				? !dependency.value.some((value) => value === dependencyValue)
+				: Boolean(dependencyValue) && dependencyValue !== dependency.value;
 
 		case "in":
 			return (
