@@ -321,23 +321,42 @@ const getUnrenderedPropertyNames = (
 
 class RenderedFieldRegistry {
 	private readonly fieldCounts = new Map<string, number>();
+	private readonly registrations = new Map<object, string>();
 	private readonly listeners = new Set<RenderedFieldListener>();
 	private fieldNames = new Set<string>();
 
-	register(fieldName: string) {
-		this.fieldCounts.set(fieldName, (this.fieldCounts.get(fieldName) ?? 0) + 1);
-		this.updateFieldNames();
+	register(registration: object, fieldName: string) {
+		const previousFieldName = this.registrations.get(registration);
+
+		if (previousFieldName !== fieldName) {
+			if (previousFieldName !== undefined) {
+				this.decrementFieldCount(previousFieldName);
+			}
+
+			this.registrations.set(registration, fieldName);
+			this.fieldCounts.set(
+				fieldName,
+				(this.fieldCounts.get(fieldName) ?? 0) + 1,
+			);
+			this.updateFieldNames(false);
+		}
 
 		return () => {
-			const count = this.fieldCounts.get(fieldName);
-			if (count === undefined || count === 1) {
-				this.fieldCounts.delete(fieldName);
-			} else {
-				this.fieldCounts.set(fieldName, count - 1);
+			if (this.registrations.get(registration) !== fieldName) {
+				return;
 			}
-			this.updateFieldNames();
+
+			this.registrations.delete(registration);
+			this.decrementFieldCount(fieldName);
+			this.updateFieldNames(true);
 		};
 	}
+
+	notify = () => {
+		for (const listener of this.listeners) {
+			listener();
+		}
+	};
 
 	subscribe = (listener: RenderedFieldListener) => {
 		this.listeners.add(listener);
@@ -346,10 +365,19 @@ class RenderedFieldRegistry {
 
 	getFieldNames = () => this.fieldNames;
 
-	private updateFieldNames() {
+	private decrementFieldCount(fieldName: string) {
+		const count = this.fieldCounts.get(fieldName);
+		if (count === undefined || count === 1) {
+			this.fieldCounts.delete(fieldName);
+		} else {
+			this.fieldCounts.set(fieldName, count - 1);
+		}
+	}
+
+	private updateFieldNames(notify: boolean) {
 		this.fieldNames = new Set(this.fieldCounts.keys());
-		for (const listener of this.listeners) {
-			listener();
+		if (notify) {
+			this.notify();
 		}
 	}
 }
@@ -915,14 +943,27 @@ export const AutoField = memo(function AutoFieldRaw({
 	const renderedFieldRegistry = useRenderedFieldRegistry();
 	const isFormRestField = useContext(IsFormRestFieldContext);
 	const FieldComponent = fieldMapper(field.schema);
+	const registrationRef = useRef<object | null>(null);
+
+	if (registrationRef.current === null) {
+		registrationRef.current = {};
+	}
+
+	const registration = registrationRef.current;
+	if (!isFormRestField) {
+		renderedFieldRegistry.register(registration, name);
+	}
 
 	useLayoutEffect(() => {
 		if (isFormRestField) {
 			return;
 		}
 
-		return renderedFieldRegistry.register(name);
-	}, [isFormRestField, name, renderedFieldRegistry]);
+		const unregister = renderedFieldRegistry.register(registration, name);
+		renderedFieldRegistry.notify();
+
+		return unregister;
+	}, [isFormRestField, name, registration, renderedFieldRegistry]);
 
 	useEffect(() => {
 		if (!FieldComponent) {

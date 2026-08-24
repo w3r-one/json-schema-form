@@ -31,6 +31,103 @@ const CountingTextField = ({ name }: FieldComponentProps) => {
 
 const countingFieldMapper: FieldMapper = () => CountingTextField;
 
+const ExpandedChoiceField = ({ name }: FieldComponentProps) => {
+	const field = useField(name);
+
+	if (!("enum" in field.schema)) {
+		throw new Error("ExpandedChoiceField requires a choice schema");
+	}
+
+	return (
+		<fieldset>
+			<legend>{field.label}</legend>
+			{field.schema.enum.map((value) => (
+				<label key={value}>
+					<input
+						type="radio"
+						name={field.name}
+						value={value}
+						checked={field.value === value}
+						onChange={() => field.onChange?.(value)}
+					/>
+					{value}
+				</label>
+			))}
+		</fieldset>
+	);
+};
+
+const NamedTextField = ({ name }: FieldComponentProps) => {
+	const field = useField(name);
+
+	return (
+		<input
+			aria-label={field.name}
+			name={field.name}
+			value={String(field.value ?? "")}
+			onChange={(event) => field.onChange?.(event.currentTarget.value)}
+		/>
+	);
+};
+
+const expandedChoiceFieldMapper: FieldMapper = (fieldSchema) =>
+	"enum" in fieldSchema ? ExpandedChoiceField : NamedTextField;
+
+const expandedChoiceSchema: FormSchema = {
+	$id: "",
+	$schema: "",
+	title: "user",
+	type: "object",
+	properties: {
+		type: {
+			type: "string",
+			title: "Type",
+			enum: ["internal", "external"],
+			options: {
+				layout: "default",
+				widget: "choice",
+				choice: {
+					enumTitles: ["Internal", "External"],
+					expanded: true,
+					multiple: false,
+					placeholder: "",
+					preferredChoices: [],
+				},
+			},
+		},
+		displayName: {
+			type: "string",
+			title: "Display name",
+			options: { layout: "default", widget: "text" },
+		},
+	},
+	required: [],
+	options: {
+		layout: "default",
+		widget: "test",
+		form: {
+			action: "http://localhost/user",
+			method: "POST",
+			async: true,
+		},
+	},
+};
+
+const FormWithExpandedChoiceRest = ({
+	renderType,
+}: {
+	renderType: boolean;
+}) => (
+	<Form
+		schema={expandedChoiceSchema}
+		fieldMapper={expandedChoiceFieldMapper}
+		initialValue={{ user: { type: "internal" } }}
+	>
+		{renderType && <AutoField name="user[type]" />}
+		<FormRest name="user" />
+	</Form>
+);
+
 const ObjectField = ({ name }: FieldComponentProps) => {
 	const field = useField(name);
 
@@ -361,6 +458,57 @@ describe.each(dependencyModeCases)(
 );
 
 describe("FormRest", () => {
+	test("does not duplicate an explicitly rendered expanded choice on initial mount", () => {
+		const { container } = render(
+			<FormWithExpandedChoiceRest renderType={true} />,
+		);
+		const form = container.querySelector("form") as HTMLFormElement;
+		const typeControls = container.querySelectorAll('[name="user[type]"]');
+
+		expect(typeControls).toHaveLength(2);
+		expect(
+			container.querySelectorAll(
+				'[name="user[type]"][value="internal"]',
+			),
+		).toHaveLength(1);
+		expect(new FormData(form).get("user[type]")).toBe("internal");
+	});
+
+	test("still renders genuinely unrendered fields beside an explicit choice", () => {
+		render(<FormWithExpandedChoiceRest renderType={true} />);
+
+		expect(screen.getByLabelText("user[displayName]")).toBeInTheDocument();
+	});
+
+	test("moves a dynamically removed explicit choice into FormRest", () => {
+		const { container, rerender } = render(
+			<FormWithExpandedChoiceRest renderType={true} />,
+		);
+
+		rerender(<FormWithExpandedChoiceRest renderType={false} />);
+
+		const form = container.querySelector("form") as HTMLFormElement;
+		expect(container.querySelectorAll('[name="user[type]"]')).toHaveLength(2);
+		expect(new FormData(form).get("user[type]")).toBe("internal");
+	});
+
+	test("replaces a FormRest choice when an explicit choice is dynamically added", () => {
+		const { container, rerender } = render(
+			<FormWithExpandedChoiceRest renderType={false} />,
+		);
+
+		rerender(<FormWithExpandedChoiceRest renderType={true} />);
+
+		const form = container.querySelector("form") as HTMLFormElement;
+		expect(container.querySelectorAll('[name="user[type]"]')).toHaveLength(2);
+		expect(
+			container.querySelectorAll(
+				'[name="user[type]"][value="internal"]',
+			),
+		).toHaveLength(1);
+		expect(new FormData(form).get("user[type]")).toBe("internal");
+	});
+
 	test("renders properties that are not manually rendered", () => {
 		render(<FormWithRest renderToken={true} />);
 
